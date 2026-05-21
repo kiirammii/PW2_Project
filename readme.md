@@ -10,10 +10,10 @@
 
 ## 🧑‍💻 Author
 
-<div align="left">
-    <img src="https://avatars.githubusercontent.com/u/115722559?v=4" width="100px"      style="vertical-align: middle; margin-right: 15px;">
-    <span style="font-size: 1.2em; font-weight: bold; vertical-align: middle;">
-        Catarina Sousa
+<div style="display: flex; align-items: center; gap: 15px;">
+    <img src="https://avatars.githubusercontent.com/u/115722559?v=4" width="100px">
+    <span style="font-size: 1.2em; font-weight: bold;">
+        Catarina<br>Sousa
     </span>
 </div>
 
