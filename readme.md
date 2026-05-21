@@ -13,7 +13,7 @@
 <table align="center" style="border: 0px">
     <tr>
         <td align="center" style="border: 0px">
-        <img style="border-radius: 50%; width="100px;"" src="https://avatars.githubusercontent.com/u/115722559?v=4" width="100px;"><br>
+        <img src="https://avatars.githubusercontent.com/u/115722559?v=4" width="100px;"><br>
         <sub>
         <b>Catarina Sousa</br>
         </td>
