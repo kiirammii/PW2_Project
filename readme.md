@@ -1,11 +1,33 @@
-# 🏢 Campus Smart City API
-[![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Express](https://img.shields.io/badge/Express.js-000000?style=flat-square&logo=express&logoColor=white)](https://expressjs.com/)
-[![REST API](https://img.shields.io/badge/API-REST-blue?style=flat-square)](#)
+![Generic badge](https://img.shields.io/badge/status-%20finished-54CC74)
+
+<div align="center">
+<h1>🏢 Campus Smart City API</h1>
+</div>
 
 > A backend solution to report, track, and monitor infrastructure and maintenance issues at the ESMAD Campus.
 
----
+<hr>
+
+<table align="center" style="border: 0px">
+    <tr>
+        <td align="center" style="border: 0px">
+        <img style="border-radius: 50%; width="100px;"" src="https://avatars.githubusercontent.com/u/115722559?v=4" width="100px;"><br>
+        <sub>
+        <b>Catarina Sousa</br>
+        </td>
+    </tr>
+</table>
+
+### Technologies Used
+
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)
+![Express](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)
+![JSON](https://img.shields.io/badge/JSON-000000?style=for-the-badge&logo=json&logoColor=white)
+![Databases](https://img.shields.io/badge/MySQL%20%7C%20MongoDB-4479A1?style=for-the-badge&logo=databricks&logoColor=white)
+
+
+
+<hr>
 
 ### 📖 The Mission
 This API serves as the core backend for a platform where the academic community can report campus occurrences (e.g., waste, broken lighting, accessibility barriers).
