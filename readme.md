@@ -12,7 +12,6 @@
 
 <div>
     <img src="https://avatars.githubusercontent.com/u/115722559?v=4" width="100px">
-    <br>
     <h5><b>Catarina Sousa</b></h5>
 </div>
 
