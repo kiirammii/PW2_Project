@@ -10,17 +10,12 @@
 
 ## 🧑‍💻 Author
 
-<table style="border: none; border-collapse: collapse;">
-    <tr>
-        <td style="border: none;">
-            <img src="https://avatars.githubusercontent.com/u/115722559?v=4" width="100px;">
-        </td>
-        <td style="border: none;">
-            <b>Catarina<br>Sousa</b>
-        </td>
-    </tr>
-</table>
-
+<div align="left">
+    <img src="https://avatars.githubusercontent.com/u/115722559?v=4" width="100px"      style="vertical-align: middle; margin-right: 15px;">
+    <span style="font-size: 1.2em; font-weight: bold; vertical-align: middle;">
+        Catarina Sousa
+    </span>
+</div>
 
 ## 💻 Technologies Used
 
