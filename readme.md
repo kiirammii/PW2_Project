@@ -10,11 +10,10 @@
 
 ## 🧑‍💻 Author
 
-<div style="display: flex; align-items: center; gap: 15px;">
+<div>
     <img src="https://avatars.githubusercontent.com/u/115722559?v=4" width="100px">
-    <span style="font-size: 1.2em; font-weight: bold;">
-        Catarina<br>Sousa
-    </span>
+    <br>
+    <h5><b>Catarina Sousa</b></h5>
 </div>
 
 ## 💻 Technologies Used
