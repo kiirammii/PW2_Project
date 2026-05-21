@@ -10,12 +10,12 @@
 
 ## 🧑‍💻 Author
 
-<table align="center">
+<table>
     <tr>
         <td>
             <img src="https://avatars.githubusercontent.com/u/115722559?v=4" width="100px;">
         </td>
-        <td>
+        <td style="width:100px">
             <b>Catarina<br>Sousa</br>
         </td>
     </tr>
