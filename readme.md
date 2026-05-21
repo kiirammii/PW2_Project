@@ -10,13 +10,13 @@
 
 ## 🧑‍💻 Author
 
-<table>
+<table style="border: none; border-collapse: collapse;">
     <tr>
-        <td>
+        <td style="border: none;">
             <img src="https://avatars.githubusercontent.com/u/115722559?v=4" width="100px;">
         </td>
-        <td style="width:100px">
-            <b>Catarina<br>Sousa</br>
+        <td style="border: none;">
+            <b>Catarina<br>Sousa</b>
         </td>
     </tr>
 </table>
