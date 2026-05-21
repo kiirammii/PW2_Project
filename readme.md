@@ -4,8 +4,8 @@
 <h1>🏢 Smart Campus</h1>
 </div>
 
-<div>
-<h3>A solution to report, track, and monitor infrastructure and maintenance issues at the ESMAD Campus.</h3>
+<div align="center">
+<h5>A solution to report, track, and monitor infrastructure and maintenance issues at the ESMAD Campus.</h5>
 </div>
 
 ## 🧑‍💻 Author
