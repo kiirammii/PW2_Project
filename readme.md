@@ -6,7 +6,7 @@
 
 > A backend solution to report, track, and monitor infrastructure and maintenance issues at the ESMAD Campus.
 
-<hr>
+## Autor
 
 <table align="center" style="border: 0px">
     <tr>
@@ -18,14 +18,14 @@
     </tr>
 </table>
 
+<hr>
+
 ### Technologies Used
 
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)
 ![Express](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)
 ![JSON](https://img.shields.io/badge/JSON-000000?style=for-the-badge&logo=json&logoColor=white)
-![Databases](https://img.shields.io/badge/MySQL%20%7C%20MongoDB-4479A1?style=for-the-badge&logo=databricks&logoColor=white)
-
-
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
 
 <hr>
 
