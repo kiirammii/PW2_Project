@@ -5,7 +5,7 @@
 </div>
 
 <div align="center">
-<h5>A solution to report, track, and monitor infrastructure and maintenance issues at the ESMAD Campus.</h5>
+<h4>A solution to report, track, and monitor infrastructure and maintenance issues at the ESMAD Campus.</h4>
 </div>
 
 ## 🧑‍💻 Author
