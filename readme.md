@@ -10,7 +10,7 @@
 
 ## 🧑‍💻 Author
 
-<div>
+<div style="gap:10px">
     <img src="https://avatars.githubusercontent.com/u/115722559?v=4" width="100px">
     <h5><b>Catarina Sousa</b></h5>
 </div>
