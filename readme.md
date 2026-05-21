@@ -6,7 +6,7 @@
 
 > A backend solution to report, track, and monitor infrastructure and maintenance issues at the ESMAD Campus.
 
-## Autor
+## 🧑‍💻 Author
 
 <table align="center" style="border: 0px">
     <tr>
@@ -20,7 +20,7 @@
 
 <hr>
 
-### Technologies Used
+### 💻 Technologies Used
 
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)
 ![Express](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)
@@ -33,17 +33,17 @@
 This API serves as the core backend for a platform where the academic community can report campus occurrences (e.g., waste, broken lighting, accessibility barriers).
 It replaces informal reporting with a structured workflow that tracks issue lifecycles and generates public statistical data to support decision-making
 
+<hr>
+
 ### 👥 Role Architecture
 The system dynamically adapts to three distinct user access levels:
 * **Students/Faculty:** Can log new occurrences (with descriptions, locations, and photos), comment on open issues, and edit/delete their own reports
 * **Staff:** Responsible for updating issue statuses, logging maintenance procedures, and adjusting priorities manually or via automated API metrics
 * **Admin:** Oversees the platform by validating staff accounts, managing user suspensions, deleting content, and configuring system categories/statuses
 
----
+<hr>
 
 ### 🛠️ Tech Stack & Rules
 * **Core:** Node.js + Express.js
 * **Database:** MySQL (via Sequelize)
 * **Specs:** Follows strict REST principles, communicates via JSON, and includes Swagger/Postman docs
-
----
