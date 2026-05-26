@@ -9,7 +9,6 @@ const HOST = process.env.HOST;
 app.use(express.json());
 
 // import express router for carts & products resources
-import authRoutes from './routes/auth.routes.js';
 import categoryRoutes from './routes/category.routes.js';
 import commentRoutes from './routes/comment.routes.js';
 import occurrenceRoutes from './routes/occurrence.routes.js';
@@ -18,7 +17,6 @@ import userRoutes from './routes/user.routes.js';
 
 
 // apply express router for each routes file
-app.use('/auth', authRoutes);
 app.use('/categories', categoryRoutes);
 app.use('/comments', commentRoutes);
 app.use('/occurrences', occurrenceRoutes);
