@@ -2,17 +2,19 @@
 // create a connection to the database using environment variables for configuration
 import { Sequelize, DataTypes } from "sequelize";
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 const sequelize = new Sequelize(
-    'smart_campus',
-    'root',
-    '',
+    process.env.DB_NAME,
+    process.env.DB_USER,
+    process.env.DB_PASSWORD,
     {
-        host: '127.0.0.1',
+        host: process.env.DB_HOST,
         dialect: 'mysql',
         port: 3306
     }
 );
-
 
 
 // ==========================================
@@ -95,11 +97,14 @@ StatusHistory.belongsTo(Occurrence, { foreignKey: 'occurrence_id' });
 // ==========================================
 
 try {
-    // await sequelize.sync({ alter: true }); // use { force: true } to drop and recreate tables on every sync (use with caution in production)
+    await sequelize.sync({ alter: true }); // use { force: true } to drop and recreate tables on every sync (use with caution in production)
     console.log("All models were synchronized successfully.");
 } catch (error) {
     console.error("Error synchronizing models:", error);
     process.exit(1);
 }
 
-export { Category, Comment, OccurrencePhoto, Occurrence, StatusHistory, Status, User }
+export { 
+    Category, Comment, OccurrencePhoto, Occurrence, StatusHistory, Status, User,
+    sequelize, DataTypes
+};
