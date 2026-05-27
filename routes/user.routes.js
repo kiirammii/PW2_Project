@@ -11,4 +11,4 @@ router.get('/', verifyToken, isAdmin, userControllers.getAllUsers);
 router.patch('/:user_id', verifyToken, userControllers.updateUser);
 router.delete('/:user_id', verifyToken, isAdmin, userControllers.deleteUser);
 
-export default router;   
+export default router;

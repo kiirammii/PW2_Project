@@ -18,7 +18,7 @@ const sequelize = new Sequelize(
 
 
 // ==========================================
-// TESTAR A CONEXÃO COM A BASE DE DADOS
+// TEST DATABSE CONNECTION
 // ==========================================
 
 try {
@@ -32,7 +32,7 @@ try {
 
 
 // ==========================================
-// IMPORTAR E INICIALIZAR OS MODELOS
+// IMPORT AND INITIALIZE MODELS
 // ==========================================
 
 import CategoryModel from "./category.model.js";
@@ -59,7 +59,7 @@ const User = UserModel(sequelize, DataTypes);
 
 
 // ==========================================
-// RELACIONAMENTOS
+// RELATIONS BETWEEN MODELS
 // ==========================================
 
 // 1. Relações do Utilizador (User)
@@ -93,18 +93,18 @@ StatusHistory.belongsTo(Occurrence, { foreignKey: 'occurrence_id' });
 
 
 // ==========================================
-// SINCRONIZAR OS MODELOS COM A BASE DE DADOS
+// SYNCHRONIZE MODELS WITH DATABASE
 // ==========================================
 
 try {
-    await sequelize.sync({ alter: true }); // use { force: true } to drop and recreate tables on every sync (use with caution in production)
+    await sequelize.sync({ alter: false }); // use { force: true } to drop and recreate tables on every sync (use with caution in production)
     console.log("All models were synchronized successfully.");
 } catch (error) {
     console.error("Error synchronizing models:", error);
     process.exit(1);
 }
 
-export { 
+export {
     Category, Comment, OccurrencePhoto, Occurrence, StatusHistory, Status, User,
     sequelize, DataTypes
 };
