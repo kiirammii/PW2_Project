@@ -21,7 +21,7 @@ export default (sequelize, DataTypes) => sequelize.define("occurrence", {
         allowNull: false
     },
     priority: {
-        type: DataTypes.ENUM('low', 'medium', 'high'),
+        type: DataTypes.ENUM('Low', 'Medium', 'High'),
         allowNull: false
     },
     building_zone: {

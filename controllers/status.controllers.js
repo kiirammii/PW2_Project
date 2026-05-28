@@ -1,3 +1,5 @@
+import { Status } from "../models/db.config.js";
+
 // get all statuses
 export const getAllStatus = async (req, res, next) => {
     try {

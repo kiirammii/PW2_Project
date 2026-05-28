@@ -97,7 +97,7 @@ StatusHistory.belongsTo(Occurrence, { foreignKey: 'occurrence_id' });
 // ==========================================
 
 try {
-    await sequelize.sync({ alter: false }); // use { force: true } to drop and recreate tables on every sync (use with caution in production)
+    await sequelize.sync({ alter: true }); // use { force: true } to drop and recreate tables on every sync (use with caution in production)
     console.log("All models were synchronized successfully.");
 } catch (error) {
     console.error("Error synchronizing models:", error);
