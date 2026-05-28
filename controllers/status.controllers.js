@@ -16,17 +16,25 @@ export const createStatus = async (req, res, next) => {
     try {
         const { status_name } = req.body;
 
-        if (!status_name) {
-            return res.status(400).json({ message: "The status name is required." });
+        // Proteção extra no controlador
+        if (req.loggedUser.profile_type !== 'admin') {
+            return res.status(403).json({ message: "Access denied. Only administrators can create statuses." });
         }
+
+        // Validação com trim() para evitar nomes vazios
+        if (!status_name || status_name.trim() === "") {
+            return res.status(400).json({ message: "The status name is required and cannot be empty." });
+        }
+
+        const cleanName = status_name.trim();
 
         // Evitar statuses duplicados com o mesmo nome
-        const statusExists = await Status.findOne({ where: { status_name } });
+        const statusExists = await Status.findOne({ where: { status_name: cleanName } });
         if (statusExists) {
-            return res.status(409).json({ message: `A status with this name (${status_name}) already exists.` });
+            return res.status(409).json({ message: `A status with this name (${cleanName}) already exists.` });
         }
 
-        const newStatus = await Status.create({ status_name });
+        const newStatus = await Status.create({ status_name: cleanName });
         
         return res.status(201).json({
             message: "Status created successfully!",
@@ -44,7 +52,12 @@ export const updateStatus = async (req, res, next) => {
         const { status_id } = req.params;
         const { status_name } = req.body;
 
-        if (!status_name) {
+        // Proteção extra no controlador
+        if (req.loggedUser.profile_type !== 'admin') {
+            return res.status(403).json({ message: "Access denied. Only administrators can update statuses." });
+        }
+
+        if (!status_name || status_name.trim() === "") {
             return res.status(400).json({ message: "The new status name is required." });
         }
 
@@ -53,7 +66,15 @@ export const updateStatus = async (req, res, next) => {
             return res.status(404).json({ message: "Status not found." });
         }
 
-        status.status_name = status_name;
+        const cleanName = status_name.trim();
+
+        // Verificar se já existe OUTRO estado com esse nome
+        const nameConflict = await Status.findOne({ where: { status_name: cleanName } });
+        if (nameConflict && String(nameConflict.status_id) !== String(status_id)) {
+            return res.status(409).json({ message: "Another status with this name already exists." });
+        }
+
+        status.status_name = cleanName;
         await status.save();
 
         return res.status(200).json({
@@ -71,6 +92,11 @@ export const deleteStatus = async (req, res, next) => {
     try {
         const { status_id } = req.params;
 
+        // Proteção extra no controlador
+        if (req.loggedUser.profile_type !== 'admin') {
+            return res.status(403).json({ message: "Access denied. Only administrators can delete statuses." });
+        }
+
         const status = await Status.findByPk(status_id);
         if (!status) {
             return res.status(404).json({ message: "Status not found." });
@@ -80,6 +106,8 @@ export const deleteStatus = async (req, res, next) => {
         return res.status(200).json({ message: "Status deleted successfully!" });
     } catch (error) {
         console.error("Error in deleteStatus:", error);
-        return res.status(500).json({ message: "Error deleting status. Make sure it is not associated with any occurrences." });
+        return res.status(500).json({ 
+            message: "Error deleting status. Make sure it is not associated with any occurrences or status history." 
+        });
     }
 }

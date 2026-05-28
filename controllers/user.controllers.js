@@ -12,6 +12,23 @@ export const registerUser = async (req, res, next) => {
             return res.status(400).json({ message: "Todos os campos (user_name, email, password, profile_type) são obrigatórios." });
         }
 
+        let dbProfileType = profile_type;
+        if (profile_type === 'funcionario') dbProfileType = 'staff';
+        if (profile_type === 'estudante' || profile_type === 'docente') dbProfileType = 'student_teacher';
+
+        // Validar se o profile_type é um dos aceites pela base de dados
+        const allowedProfiles = ['student_teacher', 'staff', 'admin'];
+        if (!allowedProfiles.includes(dbProfileType)) {
+            return res.status(400).json({ message: "Tipo de perfil inválido. Use: admin, funcionario, estudante ou docente." });
+        }
+
+        // REGRA DO ENUNCIADO: Estudantes ou docentes registam-se obrigatoriamente usando o e-mail institucional
+        if (dbProfileType === 'student_teacher') {
+            if (!email.includes('esmad.ipp.pt') && !email.includes('esht.ipp.pt')) {
+                return res.status(400).json({ message: "Estudantes e Docentes têm de se registar com o e-mail institucional." });
+            }
+        }
+
         // Verificar se o email já está registado
         const userExists = await User.findOne({ where: { email } });
         if (userExists) {
@@ -27,7 +44,7 @@ export const registerUser = async (req, res, next) => {
             user_name,
             email,
             password: hashedPassword,
-            profile_type,
+            profile_type: dbProfileType,
             state: 'active'
         });
 
@@ -37,7 +54,7 @@ export const registerUser = async (req, res, next) => {
                 user_id: newUser.user_id,
                 user_name: newUser.user_name,
                 email: newUser.email,
-                profile_type: newUser.profile_type
+                profile_type: profile_type // Devolve o nome amigável para o Postman
             }
         });
 
@@ -73,10 +90,14 @@ export const loginUser = async (req, res, next) => {
             return res.status(401).json({ message: "Credenciais inválidas." });
         }
 
+        // Traduz o perfil da BD de volta para 'funcionario' para que os teus middlewares 
+        // e os controladores das ocorrências (que esperam 'funcionario') funcionem em harmonia
+        const webProfileType = user.profile_type === 'staff' ? 'funcionario' : user.profile_type;
+
         // Gerar o Token JWT
         const secretKey = process.env.JWT_SECRET || 'chave_secreta_provisoria_pw2';
         const token = jwt.sign(
-            { user_id: user.user_id, profile_type: user.profile_type },
+            { user_id: user.user_id, profile_type: webProfileType },
             secretKey,
             { expiresIn: '1d' }
         );
@@ -87,7 +108,7 @@ export const loginUser = async (req, res, next) => {
             user: {
                 user_id: user.user_id,
                 user_name: user.user_name,
-                profile_type: user.profile_type
+                profile_type: webProfileType
             }
         });
 
@@ -136,13 +157,15 @@ export const updateUser = async (req, res, next) => {
 
         await user.save();
 
+        const webProfileType = user.profile_type === 'staff' ? 'funcionario' : user.profile_type;
+
         return res.status(200).json({
             message: "Utilizador atualizado com sucesso!",
             user: {
                 user_id: user.user_id,
                 user_name: user.user_name,
                 email: user.email,
-                profile_type: user.profile_type,
+                profile_type: webProfileType,
                 state: user.state
             }
         });
@@ -157,6 +180,11 @@ export const updateUser = async (req, res, next) => {
 export const deleteUser = async (req, res, next) => {
     try {
         const { user_id } = req.params;
+
+        // Proteção extra: impede que utilizadores comuns acessem o delete caso o middleware falhe
+        if (req.loggedUser.profile_type !== 'admin') {
+            return res.status(403).json({ message: "Acesso proibido. Apenas administradores podem eliminar utilizadores." });
+        }
 
         const user = await User.findByPk(user_id);
         if (!user) {
