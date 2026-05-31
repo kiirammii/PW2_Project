@@ -5,16 +5,21 @@ import { User } from '../models/db.config.js';
 // create a new account
 export const registerUser = async (req, res, next) => {
     try {
-        const { user_name, email, password, profile_type } = req.body;
+        const { user_name, email, password, profile_type: requestedProfileType } = req.body;
 
         // Validar se todos os campos obrigatórios vieram no body (profile_type is optional)
         if (!user_name || !email || !password) {
             return res.status(400).json({ message: "All fields (user_name, email, password) are required." });
         }
 
-        let profile_type = 'student_teacher'; // default profile type
+        const profile_type = requestedProfileType || 'student_teacher';
 
-        // REGRA DO ENUNCIADO: students ou teachers registam-se obrigatoriamente usando o e-mail institucional
+        const allowedProfiles = ['student_teacher', 'staff', 'admin'];
+        if (!allowedProfiles.includes(profile_type)) {
+            return res.status(400).json({ message: "Invalid profile type. Use: admin, staff, or student_teacher." });
+        }
+
+        // Students and teachers must register with an institutional email
         if (profile_type === 'student_teacher') {
             if (!email.includes('esmad.ipp.pt') && !email.includes('esht.ipp.pt')) {
                 return res.status(400).json({ message: "Students and Teachers must register with the institutional email." });
