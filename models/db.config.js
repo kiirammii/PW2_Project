@@ -65,7 +65,7 @@ const User = UserModel(sequelize, DataTypes);
 
 const defaultAdminUser = {
     user_name: process.env.DEFAULT_ADMIN_NAME || 'Admin',
-    email: process.env.DEFAULT_ADMIN_EMAIL || 'admin@pw2.local',
+    email: process.env.DEFAULT_ADMIN_EMAIL || 'admin@campus2.ipp.pt',
     password: process.env.DEFAULT_ADMIN_PASSWORD || 'Admin123!'
 };
 
