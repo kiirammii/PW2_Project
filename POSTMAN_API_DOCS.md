@@ -451,3 +451,13 @@ Expected response:
 ## Quick Note
 
 Your project also has `PATCH` routes in addition to `POST`, `PUT`, and `DELETE`. I included them here because they are part of the current API and are useful in Postman.
+
+---
+
+## Changelog (2026-05-31)
+
+- Fixed: Comment route mapping bug that caused `PATCH /comments/:comment_id` and `DELETE /comments/:comment_id` to resolve incorrectly when mounted under the `/comments` router. The routes now match the documented API shape.
+- Fixed: Added explicit `404` responses when an occurrence ID does not exist for comment-related endpoints (`GET /occurrences/:occurrence_id/comments` and `PATCH /comments/:comment_id`).
+- Note: The `DELETE /occurrences/:occurrence_id/photos/:photo_id` endpoint is protected by authentication but the controller currently does not enforce owner/admin authorization. Consider adding an ownership or role check if photo deletion should be restricted to the occurrence owner or admins/staff.
+
+These changes have been applied in the repository and pushed on branch `fix/comment-routes-and-404s`.
