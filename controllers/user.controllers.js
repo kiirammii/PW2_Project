@@ -7,14 +7,20 @@ export const registerUser = async (req, res, next) => {
     try {
         const { user_name, email, password, profile_type } = req.body;
 
-        // Validar se todos os campos obrigatórios vieram no body
-        if (!user_name || !email || !password || !profile_type) {
-            return res.status(400).json({ message: "Todos os campos (user_name, email, password, profile_type) são obrigatórios." });
+        // Validar se todos os campos obrigatórios vieram no body (profile_type is optional)
+        if (!user_name || !email || !password) {
+            return res.status(400).json({ message: "Todos os campos (user_name, email, password) são obrigatórios." });
         }
 
-        let dbProfileType = profile_type;
-        if (profile_type === 'funcionario') dbProfileType = 'staff';
-        if (profile_type === 'estudante' || profile_type === 'docente') dbProfileType = 'student_teacher';
+        // Tornar profile_type opcional: se não fornecido, por omissão assume-se 'estudante'
+        let incomingProfile = profile_type;
+        if (!incomingProfile) {
+            incomingProfile = 'estudante';
+        }
+
+        let dbProfileType = incomingProfile;
+        if (incomingProfile === 'funcionario') dbProfileType = 'staff';
+        if (incomingProfile === 'estudante' || incomingProfile === 'docente') dbProfileType = 'student_teacher';
 
         // Validar se o profile_type é um dos aceites pela base de dados
         const allowedProfiles = ['student_teacher', 'staff', 'admin'];
@@ -54,7 +60,7 @@ export const registerUser = async (req, res, next) => {
                 user_id: newUser.user_id,
                 user_name: newUser.user_name,
                 email: newUser.email,
-                profile_type: profile_type // Devolve o nome amigável para o Postman
+                profile_type: incomingProfile 
             }
         });
 
@@ -70,24 +76,24 @@ export const loginUser = async (req, res, next) => {
         const { email, password } = req.body;
 
         if (!email || !password) {
-            return res.status(400).json({ message: "Email e password são obrigatórios." });
+            return res.status(400).json({ message: "Email and password are required." });
         }
 
         // Procurar o utilizador pelo email
         const user = await User.findOne({ where: { email } });
         if (!user) {
-            return res.status(401).json({ message: "Credenciais inválidas." });
+            return res.status(401).json({ message: "Invalid credentials." });
         }
 
         // Verificar se o utilizador está suspenso
         if (user.state === 'suspended') {
-            return res.status(403).json({ message: "A tua conta encontra-se suspensa. Contacta um administrador." });
+            return res.status(403).json({ message: "Your account is suspended. Contact an administrator." });
         }
 
         // Comparar a password enviada com a password encriptada na BD
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            return res.status(401).json({ message: "Credenciais inválidas." });
+            return res.status(401).json({ message: "Invalid credentials." });
         }
 
         // Traduz o perfil da BD de volta para 'funcionario' para que os teus middlewares 
@@ -103,7 +109,7 @@ export const loginUser = async (req, res, next) => {
         );
 
         return res.status(200).json({
-            message: "Login efetuado com sucesso!",
+            message: "Login successful!",
             token,
             user: {
                 user_id: user.user_id,
@@ -113,8 +119,8 @@ export const loginUser = async (req, res, next) => {
         });
 
     } catch (error) {
-        console.error("Erro no loginUser:", error);
-        return res.status(500).json({ message: "Erro interno do servidor ao efetuar login." });
+        console.error("Error in loginUser:", error);
+        return res.status(500).json({ message: "Internal server error while logging in." });
     }
 }
 
@@ -126,8 +132,8 @@ export const getAllUsers = async (req, res, next) => {
         });
         return res.status(200).json(users);
     } catch (error) {
-        console.error("Erro no getAllUsers:", error);
-        return res.status(500).json({ message: "Erro ao listar utilizadores." });
+        console.error("Error in getAllUsers:", error);
+        return res.status(500).json({ message: "Error while listing users." });
     }
 }
 
@@ -139,12 +145,12 @@ export const updateUser = async (req, res, next) => {
 
         // SEGURANÇA: Se não for admin, só pode editar o seu próprio ID
         if (req.loggedUser.profile_type !== 'admin' && String(req.loggedUser.user_id) !== String(user_id)) {
-            return res.status(403).json({ message: "Acesso negado. Não podes editar o perfil de outros utilizadores." });
+            return res.status(403).json({ message: "Access denied. You cannot edit the other users' profiles." });
         }
 
         const user = await User.findByPk(user_id);
         if (!user) {
-            return res.status(404).json({ message: "Utilizador não encontrado." });
+            return res.status(404).json({ message: "User not found." });
         }
 
         if (user_name) user.user_name = user_name;
@@ -157,22 +163,20 @@ export const updateUser = async (req, res, next) => {
 
         await user.save();
 
-        const webProfileType = user.profile_type === 'staff' ? 'funcionario' : user.profile_type;
-
         return res.status(200).json({
-            message: "Utilizador atualizado com sucesso!",
+            message: "User updated successfully!",
             user: {
                 user_id: user.user_id,
                 user_name: user.user_name,
                 email: user.email,
-                profile_type: webProfileType,
+                profile_type: user.profile_type,
                 state: user.state
             }
         });
 
     } catch (error) {
-        console.error("Erro no updateUser:", error);
-        return res.status(500).json({ message: "Erro ao atualizar utilizador." });
+        console.error("Error in updateUser:", error);
+        return res.status(500).json({ message: "Error while updating user." });
     }
 }
 
@@ -183,23 +187,23 @@ export const deleteUser = async (req, res, next) => {
 
         // Proteção extra: impede que utilizadores comuns acessem o delete caso o middleware falhe
         if (req.loggedUser.profile_type !== 'admin') {
-            return res.status(403).json({ message: "Acesso proibido. Apenas administradores podem eliminar utilizadores." });
+            return res.status(403).json({ message: "Access denied. Only administrators can delete users." });
         }
 
         const user = await User.findByPk(user_id);
         if (!user) {
-            return res.status(404).json({ message: "Utilizador não encontrado." });
+            return res.status(404).json({ message: "User not found." });
         }
 
         if (String(req.loggedUser.user_id) === String(user_id)) {
-            return res.status(400).json({ message: "Não podes eliminar a tua própria conta de administrador." });
+            return res.status(400).json({ message: "You cannot delete your own administrator account." });
         }
 
         await user.destroy();
-        return res.status(200).json({ message: "Utilizador eliminado com sucesso!" });
+        return res.status(200).json({ message: "User deleted successfully!" });
 
     } catch (error) {
-        console.error("Erro no deleteUser:", error);
-        return res.status(500).json({ message: "Erro ao eliminar utilizador." });
+        console.error("Error in deleteUser:", error);
+        return res.status(500).json({ message: "Error while deleting user." });
     }
 }
