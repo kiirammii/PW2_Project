@@ -1,5 +1,6 @@
 // using sequelize with MySQL
 // create a connection to the database using environment variables for configuration
+import bcrypt from 'bcrypt';
 import { Sequelize, DataTypes } from "sequelize";
 
 import dotenv from 'dotenv';
@@ -59,6 +60,48 @@ const User = UserModel(sequelize, DataTypes);
 
 
 // ==========================================
+// DEFAULT ADMIN USER
+// ==========================================
+
+const defaultAdminUser = {
+    user_name: process.env.DEFAULT_ADMIN_NAME || 'Admin',
+    email: process.env.DEFAULT_ADMIN_EMAIL || 'admin@pw2.local',
+    password: process.env.DEFAULT_ADMIN_PASSWORD || 'Admin123!'
+};
+
+const ensureDefaultAdminUser = async () => {
+    const existingAdmin = await User.findOne({
+        where: { email: defaultAdminUser.email }
+    });
+
+    if (existingAdmin) {
+        if (existingAdmin.profile_type !== 'admin' || existingAdmin.state !== 'active') {
+            existingAdmin.profile_type = 'admin';
+            existingAdmin.state = 'active';
+            await existingAdmin.save();
+        }
+
+        console.log(`Default admin user already exists: ${defaultAdminUser.email}`);
+        return;
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(defaultAdminUser.password, salt);
+
+    await User.create({
+        user_name: defaultAdminUser.user_name,
+        email: defaultAdminUser.email,
+        password: hashedPassword,
+        profile_type: 'admin',
+        state: 'active'
+    });
+
+    console.log(`Default admin user created: ${defaultAdminUser.email}`);
+};
+
+
+
+// ==========================================
 // RELATIONS BETWEEN MODELS
 // ==========================================
 
@@ -99,6 +142,7 @@ StatusHistory.belongsTo(Occurrence, { foreignKey: 'occurrence_id' });
 try {
     await sequelize.sync({ alter: true }); // use { force: true } to drop and recreate tables on every sync (use with caution in production)
     console.log("All models were synchronized successfully.");
+    await ensureDefaultAdminUser();
 } catch (error) {
     console.error("Error synchronizing models:", error);
     process.exit(1);
