@@ -5,6 +5,11 @@ export const getCommentsByOccurrence = async (req, res, next) => {
     try {
         const { occurrence_id } = req.params;
 
+        const occurrence = await Occurrence.findByPk(occurrence_id);
+        if (!occurrence) {
+            return res.status(404).json({ message: "Ocorrência não encontrada." });
+        }
+
         const comments = await Comment.findAll({
             where: { occurrence_id },
             order: [['creation_date', 'ASC']] 
@@ -70,6 +75,9 @@ export const flagComment = async (req, res, next) => {
         // Utilizador comum só sinaliza se for na ocorrência que ELE PRÓPRIO criou.
         if (profileType !== 'admin' && profileType !== 'funcionario') {
             const occurrence = await Occurrence.findByPk(comment.occurrence_id);
+            if (!occurrence) {
+                return res.status(404).json({ message: "Ocorrência não encontrada." });
+            }
             
             if (occurrence.user_id !== userId) {
                 return res.status(403).json({ 
