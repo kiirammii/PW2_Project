@@ -141,7 +141,7 @@ export const getAllUsers = async (req, res, next) => {
 export const updateUser = async (req, res, next) => {
     try {
         const { user_id } = req.params;
-        const { user_name, email, state } = req.body;
+        const { user_name, email, state, profile_type } = req.body;
 
         // SEGURANÇA: Se não for admin, só pode editar o seu próprio ID
         if (req.loggedUser.profile_type !== 'admin' && String(req.loggedUser.user_id) !== String(user_id)) {
@@ -161,6 +161,28 @@ export const updateUser = async (req, res, next) => {
             user.state = state;
         }
 
+        // Apenas admins podem alterar o profile_type
+        if (profile_type && req.loggedUser.profile_type === 'admin') {
+            // mapear nomes amigáveis para os valores da BD
+            let incomingProfile = profile_type;
+            if (!incomingProfile) incomingProfile = 'estudante';
+            let dbProfileType = incomingProfile;
+            if (incomingProfile === 'funcionario') dbProfileType = 'staff';
+            if (incomingProfile === 'estudante' || incomingProfile === 'docente') dbProfileType = 'student_teacher';
+
+            const allowedProfiles = ['student_teacher', 'staff', 'admin'];
+            if (!allowedProfiles.includes(dbProfileType)) {
+                return res.status(400).json({ message: "Tipo de perfil inválido. Use: admin, funcionario, estudante ou docente." });
+            }
+
+            // Proteção: um admin não pode remover o seu próprio estado de admin via esta rota
+            if (String(req.loggedUser.user_id) === String(user_id) && dbProfileType !== 'admin') {
+                return res.status(400).json({ message: "You cannot remove your own administrator privileges." });
+            }
+
+            user.profile_type = dbProfileType;
+        }
+
         await user.save();
 
         return res.status(200).json({
@@ -169,7 +191,7 @@ export const updateUser = async (req, res, next) => {
                 user_id: user.user_id,
                 user_name: user.user_name,
                 email: user.email,
-                profile_type: user.profile_type,
+                profile_type: user.profile_type === 'staff' ? 'funcionario' : user.profile_type,
                 state: user.state
             }
         });
