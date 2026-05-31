@@ -9,36 +9,22 @@ export const registerUser = async (req, res, next) => {
 
         // Validar se todos os campos obrigatórios vieram no body (profile_type is optional)
         if (!user_name || !email || !password) {
-            return res.status(400).json({ message: "Todos os campos (user_name, email, password) são obrigatórios." });
+            return res.status(400).json({ message: "All fields (user_name, email, password) are required." });
         }
 
-        // Tornar profile_type opcional: se não fornecido, por omissão assume-se 'estudante'
-        let incomingProfile = profile_type;
-        if (!incomingProfile) {
-            incomingProfile = 'estudante';
-        }
+        let profile_type = 'student_teacher'; // default profile type
 
-        let dbProfileType = incomingProfile;
-        if (incomingProfile === 'funcionario') dbProfileType = 'staff';
-        if (incomingProfile === 'estudante' || incomingProfile === 'docente') dbProfileType = 'student_teacher';
-
-        // Validar se o profile_type é um dos aceites pela base de dados
-        const allowedProfiles = ['student_teacher', 'staff', 'admin'];
-        if (!allowedProfiles.includes(dbProfileType)) {
-            return res.status(400).json({ message: "Tipo de perfil inválido. Use: admin, funcionario, estudante ou docente." });
-        }
-
-        // REGRA DO ENUNCIADO: Estudantes ou docentes registam-se obrigatoriamente usando o e-mail institucional
-        if (dbProfileType === 'student_teacher') {
+        // REGRA DO ENUNCIADO: students ou teachers registam-se obrigatoriamente usando o e-mail institucional
+        if (profile_type === 'student_teacher') {
             if (!email.includes('esmad.ipp.pt') && !email.includes('esht.ipp.pt')) {
-                return res.status(400).json({ message: "Estudantes e Docentes têm de se registar com o e-mail institucional." });
+                return res.status(400).json({ message: "Students and Teachers must register with the institutional email." });
             }
         }
 
         // Verificar se o email já está registado
         const userExists = await User.findOne({ where: { email } });
         if (userExists) {
-            return res.status(409).json({ message: "Este email já se encontra registado." });
+            return res.status(409).json({ message: "This email is already registered." });
         }
 
         // Encriptar a password com bcrypt por segurança
@@ -50,23 +36,23 @@ export const registerUser = async (req, res, next) => {
             user_name,
             email,
             password: hashedPassword,
-            profile_type: dbProfileType,
+            profile_type: profile_type,
             state: 'active'
         });
 
         return res.status(201).json({
-            message: "Utilizador registado com sucesso!",
+            message: "User registered successfully!",
             user: {
                 user_id: newUser.user_id,
                 user_name: newUser.user_name,
                 email: newUser.email,
-                profile_type: incomingProfile 
+                profile_type: newUser.profile_type
             }
         });
 
     } catch (error) {
-        console.error("Erro no registerUser:", error);
-        return res.status(500).json({ message: "Erro interno do servidor ao registar utilizador." });
+        console.error("Error in registerUser:", error);
+        return res.status(500).json({ message: "Internal server error while registering user." });
     }
 };
 
@@ -96,9 +82,9 @@ export const loginUser = async (req, res, next) => {
             return res.status(401).json({ message: "Invalid credentials." });
         }
 
-        // Traduz o perfil da BD de volta para 'funcionario' para que os teus middlewares 
-        // e os controladores das ocorrências (que esperam 'funcionario') funcionem em harmonia
-        const webProfileType = user.profile_type === 'staff' ? 'funcionario' : user.profile_type;
+        // Traduz o perfil da BD de volta para 'staff' para que os teus middlewares 
+        // e os controladores das ocorrências (que esperam 'staff') funcionem em harmonia
+        const webProfileType = user.profile_type === 'staff' ? 'staff' : user.profile_type;
 
         // Gerar o Token JWT
         const secretKey = process.env.JWT_SECRET || 'chave_secreta_provisoria_pw2';
@@ -143,9 +129,9 @@ export const updateUser = async (req, res, next) => {
         const { user_id } = req.params;
         const { user_name, email, state, profile_type } = req.body;
 
-        // SEGURANÇA: Se não for admin, só pode editar o seu próprio ID
+        // SECURITY: If not admin, can only edit their own profile ID
         if (req.loggedUser.profile_type !== 'admin' && String(req.loggedUser.user_id) !== String(user_id)) {
-            return res.status(403).json({ message: "Access denied. You cannot edit the other users' profiles." });
+            return res.status(403).json({ message: "Access denied. You cannot edit other users' profiles." });
         }
 
         const user = await User.findByPk(user_id);
@@ -156,31 +142,26 @@ export const updateUser = async (req, res, next) => {
         if (user_name) user.user_name = user_name;
         if (email) user.email = email;
         
-        // Apenas admins podem suspender/ativar utilizadores
+        // Only admins can suspend/activate users
         if (state && req.loggedUser.profile_type === 'admin') {
             user.state = state;
         }
 
-        // Apenas admins podem alterar o profile_type
+        // Only admins can change the profile_type
         if (profile_type && req.loggedUser.profile_type === 'admin') {
-            // mapear nomes amigáveis para os valores da BD
-            let incomingProfile = profile_type;
-            if (!incomingProfile) incomingProfile = 'estudante';
-            let dbProfileType = incomingProfile;
-            if (incomingProfile === 'funcionario') dbProfileType = 'staff';
-            if (incomingProfile === 'estudante' || incomingProfile === 'docente') dbProfileType = 'student_teacher';
-
+            
+            // Validate directly against the English DB terms
             const allowedProfiles = ['student_teacher', 'staff', 'admin'];
-            if (!allowedProfiles.includes(dbProfileType)) {
-                return res.status(400).json({ message: "Tipo de perfil inválido. Use: admin, funcionario, estudante ou docente." });
+            if (!allowedProfiles.includes(profile_type)) {
+                return res.status(400).json({ message: "Invalid profile type. Use: admin, staff, or student_teacher." });
             }
 
-            // Proteção: um admin não pode remover o seu próprio estado de admin via esta rota
-            if (String(req.loggedUser.user_id) === String(user_id) && dbProfileType !== 'admin') {
+            // Protection: an admin cannot remove their own admin privileges via this route
+            if (String(req.loggedUser.user_id) === String(user_id) && profile_type !== 'admin') {
                 return res.status(400).json({ message: "You cannot remove your own administrator privileges." });
             }
 
-            user.profile_type = dbProfileType;
+            user.profile_type = profile_type;
         }
 
         await user.save();
@@ -191,7 +172,7 @@ export const updateUser = async (req, res, next) => {
                 user_id: user.user_id,
                 user_name: user.user_name,
                 email: user.email,
-                profile_type: user.profile_type === 'staff' ? 'funcionario' : user.profile_type,
+                profile_type: user.profile_type,
                 state: user.state
             }
         });
