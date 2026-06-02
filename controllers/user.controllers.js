@@ -14,6 +14,20 @@ export const registerUser = async (req, res, next) => {
             return res.status(400).json({ message: "All fields (user_name, email, password) are required." });
         }
 
+        // validate password
+        if (password.length < 10) {
+            return res.status(400).json({ message: "Password must be at least 10 characters long." });
+        }
+
+        if (password.includes(' ')) {
+            return res.status(400).json({ message: "Password cannot contain spaces." });
+        }
+
+        // Check special characters (Only allow letters, numbers, and !, #, -, _)
+        if (!/^[a-zA-Z0-9!#\-_]+$/.test(password)) {
+            return res.status(400).json({ message: "Password can only contain letters, numbers, and the following special characters: !, #, -, _" });
+        }
+
         const profile_type = requestedProfileType || 'student_teacher';
 
         const allowedProfiles = ['student_teacher', 'staff', 'admin'];
@@ -79,7 +93,7 @@ export const loginUser = async (req, res, next) => {
         // search for the user by email
         const user = await User.findOne({ where: { email } });
         if (!user) {
-            return res.status(401).json({ message: "Invalid credentials." });
+            return res.status(401).json({ message: "Email is not registered." });
         }
 
         // verify if the user is suspended
@@ -90,7 +104,7 @@ export const loginUser = async (req, res, next) => {
         // compare the provided password with the hashed password in the database
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            return res.status(401).json({ message: "Invalid credentials." });
+            return res.status(401).json({ message: "Password is incorrect." });
         }
 
         // generate the JWT Token
@@ -123,10 +137,15 @@ export const loginUser = async (req, res, next) => {
 // ==========================================
 export const getAllUsers = async (req, res, next) => {
     try {
-        const users = await User.findAll({
-            attributes: ['user_id', 'user_name', 'email', 'profile_type', 'state']
-        });
-        return res.status(200).json(users);
+        if (req.loggedUser.profile_type === 'admin') {
+            const users = await User.findAll({
+                attributes: ['user_id', 'user_name', 'email', 'profile_type', 'state']
+            });
+            return res.status(200).json(users);
+        }
+
+        else return res.status(403).json({ message: "Access denied. Only administrators can view all users." });
+
     } catch (error) {
         console.error("Error in getAllUsers:", error);
         return res.status(500).json({ message: "Error while listing users." });

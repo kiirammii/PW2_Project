@@ -6,12 +6,12 @@ export const verifyToken = (req, res, next) => {
     const token = authHeader && authHeader.split(' ')[1]; // separate "Bearer" from the token
 
     if (!token) {
-        return res.status(401).json({ message: "Acesso negado. Token não fornecido." });
+        return res.status(401).json({ message: "Access denied. Token not provided." });
     }
 
     try {
         // verify the token and decode its payload
-        const secretKey = process.env.JWT_SECRET || 'chave_secreta_provisoria_pw2';
+        const secretKey = process.env.JWT_SECRET || 'temporary_secret_key';
         const decoded = jwt.verify(token, secretKey);
 
         // inject the user information from the token into the request object for use in subsequent controllers
@@ -23,7 +23,7 @@ export const verifyToken = (req, res, next) => {
         // pass control to the next middleware or route handler
         next();
     } catch (error) {
-        return res.status(403).json({ message: "Token inválido ou expirado." });
+        return res.status(403).json({ message: "Invalid or expired token." });
     }
 };
 
@@ -32,6 +32,6 @@ export const isAdmin = (req, res, next) => {
     if (req.loggedUser && req.loggedUser.profile_type === 'admin') {
         next();
     } else {
-        return res.status(403).json({ message: "Acesso proibido. Requer privilégios de Administrador." });
+        return res.status(403).json({ message: "Access denied. Requires Administrator privileges." });
     }
 };
