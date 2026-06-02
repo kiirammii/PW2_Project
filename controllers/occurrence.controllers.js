@@ -1,6 +1,8 @@
 import { Occurrence, StatusHistory, OccurrencePhoto} from '../models/db.config.js';
 
-// get all occurrences (Com Estatísticas Globais embutidas para Admin/Funcionário)
+// ==========================================
+// Retrieve all Occurrences (with statistics for admin and staff users)
+// ==========================================
 export const getAllOccurrences = async (req, res, next) => {
     try {
         const userId = req.loggedUser.user_id;
@@ -8,8 +10,8 @@ export const getAllOccurrences = async (req, res, next) => {
 
         let occurrences = await Occurrence.findAll();
 
-        // 🌟 SE FOR ADMIN OU FUNCIONÁRIO: Calculamos as estatísticas globais automaticamente
-        if (profileType === 'admin' || profileType === 'funcionario') {
+        // for admin and staff: global statistics calculated automatically
+        if (profileType === 'admin' || profileType === 'staff') {
             
             const totalOccurrences = occurrences.length;
 
@@ -33,15 +35,18 @@ export const getAllOccurrences = async (req, res, next) => {
             });
         }
 
-        // Se for um utilizador normal, recebe apenas a lista simples (sem estatísticas globais)
+        // for normal users: receive only the simple list (without global statistics)
         return res.status(200).json(occurrences);
 
     } catch (error) {
-        return res.status(500).json({ message: error.message || "Erro ao listar ocorrências." });
+        return res.status(500).json({ message: error.message || "Error while listing occurrences." });
     }
 }
 
-// get one occurrence
+
+// ==========================================
+// Retrieve an Occurrence
+// ==========================================
 export const getOneOccurrence = async (req, res, next) => {
     try {
         const { occurrence_id } = req.params;
@@ -55,37 +60,40 @@ export const getOneOccurrence = async (req, res, next) => {
         });
 
         if (!occurrence) {
-            return res.status(404).json({ message: "Ocorrência não encontrada." });
+            return res.status(404).json({ message: "Occurrence not found." });
         }
 
         return res.status(200).json(occurrence);
     } catch (error) {
-        return res.status(500).json({ message: error.message || "Erro ao buscar ocorrência." });
+        return res.status(500).json({ message: error.message || "Error while fetching occurrence." });
     }
 }
 
-// create an occurrence
+
+// ==========================================
+// Create a New Occurrence
+// ==========================================
 export const createOccurrence = async (req, res, next) => {
     try {
         const { description, category_id, building_zone, latitude, longitude } = req.body;
 
-        // VALIDAÇÃO DOS CAMPOS OBRIGATÓRIOS DO TEU MODELO
+        // validate mandatory fields with detailed error messages
         const errors = [];
-        if (!description || description.trim() === "") errors.push({ field: "description", message: "A descrição é obrigatória." });
-        if (!category_id) errors.push({ field: "category_id", message: "A categoria é obrigatória." });
-        if (!building_zone || building_zone.trim() === "") errors.push({ field: "building_zone", message: "A zona do edifício é obrigatória." });
-        if (latitude === undefined || latitude === null) errors.push({ field: "latitude", message: "A latitude é obrigatória." });
-        if (longitude === undefined || longitude === null) errors.push({ field: "longitude", message: "A longitude é obrigatória." });
+        if (!description || description.trim() === "") errors.push({ field: "description", message: "Description is required." });
+        if (!category_id) errors.push({ field: "category_id", message: "Category is required." });
+        if (!building_zone || building_zone.trim() === "") errors.push({ field: "building_zone", message: "Building zone is required." });
+        if (latitude === undefined || latitude === null) errors.push({ field: "latitude", message: "Latitude is required." });
+        if (longitude === undefined || longitude === null) errors.push({ field: "longitude", message: "Longitude is required." });
 
-        // Validação estrita do ENUM das zonas do edifício conforme o teu modelo
+        // validate building_zone against allowed values with a clear error message
         const allowedZones = ['Bloco A', 'Bloco B', 'Bloco C', 'Bloco D', 'Bloco E', 'Bloco F', 'Bloco G'];
         if (building_zone && !allowedZones.includes(building_zone)) {
-            errors.push({ field: "building_zone", message: "Zona do edifício inválida. Escolha entre Bloco A e Bloco G." });
+            errors.push({ field: "building_zone", message: "Invalid building zone. Choose between Bloco A and Bloco G." });
         }
 
         if (errors.length > 0) {
             return res.status(400).json({ 
-                message: "Dados de entrada inválidos", 
+                message: "Invalid input data", 
                 errors: errors 
             });
         }
@@ -103,25 +111,28 @@ export const createOccurrence = async (req, res, next) => {
             priority: 'Low'  
         });
 
-        // ✨ HISTÓRICO AUTOMÁTICO: Corrigido para "procedure_description" para bater certo com o teu modelo
+        // automatic status history entry for the new occurrence with a clear description
         await StatusHistory.create({
             occurrence_id: newOccurrence.occurrence_id, 
             status_id: 1,
-            procedure_description: "Ocorrência submetida pelo utilizador.",
+            procedure_description: "Occurrence submitted by the user.",
             change_date: new Date()
         });
 
         return res.status(201).json({
-            message: "Ocorrência criada com sucesso!",
+            message: "Occurrence created successfully!",
             occurrence: newOccurrence
         });
 
     } catch (error) {
-        return res.status(500).json({ message: error.message || "Erro interno ao criar ocorrência" });
+        return res.status(500).json({ message: error.message || "Internal server error while creating occurrence" });
     }
 };
 
-// update an occurrence
+
+// ==========================================
+// Edit an Occurrence
+// ==========================================
 export const updateOccurrence = async (req, res, next) => {
     try {
         const { occurrence_id } = req.params;
@@ -136,11 +147,11 @@ export const updateOccurrence = async (req, res, next) => {
         const occurrence = await Occurrence.findByPk(occurrence_id);
 
         if (!occurrence) {
-            return res.status(404).json({ message: "Ocorrência não encontrada." });
+            return res.status(404).json({ message: "Occurrence not found." });
         }
 
-        // 1. REGRAS PARA FUNCIONÁRIO OU ADMINISTRADOR
-        if (profileType === 'funcionario' || profileType === 'admin') {
+        // for admin and staff
+        if (profileType === 'admin' || profileType === 'staff') {
             const oldStatus = occurrence.status_id;
             const oldPriority = occurrence.priority;
 
@@ -151,25 +162,25 @@ export const updateOccurrence = async (req, res, next) => {
                 resolution_date: resolution_date || occurrence.resolution_date
             });
 
-            // ✨ HISTÓRICO AUTOMÁTICO: Corrigido para "procedure_description" conforme o teu modelo
+            // automatic status history entry for the updated occurrence with a clear description
             await StatusHistory.create({
                 occurrence_id: occurrence.occurrence_id,
                 status_id: occurrence.status_id,
-                procedure_description: `Atualizado por ${profileType}. Estado: ${oldStatus} -> ${occurrence.status_id}. Prioridade: ${oldPriority} -> ${occurrence.priority}`,
+                procedure_description: `Updated by ${profileType}. Status: ${oldStatus} -> ${occurrence.status_id}. Priority: ${oldPriority} -> ${occurrence.priority}`,
                 change_date: new Date()
             });
 
-            return res.status(200).json({ message: "Tratamento da ocorrência registado com sucesso!", occurrence });
+            return res.status(200).json({ message: "Occurrence updated successfully!", occurrence });
         } 
         
-        // 2. REGRAS PARA UTILIZADOR COMUM (Estudante/Docente)
+        // for normal users
         else {
             if (occurrence.user_id !== userId) {
-                return res.status(403).json({ message: "Acesso proibido. Não podes editar ocorrências de outros." });
+                return res.status(403).json({ message: "Access denied. You cannot edit occurrences submitted by others." });
             }
 
             if (occurrence.status_id !== 1) {
-                return res.status(400).json({ message: "Não podes alterar uma ocorrência que já está em processamento pelo funcionário." });
+                return res.status(400).json({ message: "You cannot modify an occurrence that is already being processed by a staff member." });
             }
 
             await occurrence.update({
@@ -180,15 +191,18 @@ export const updateOccurrence = async (req, res, next) => {
                 longitude: longitude || occurrence.longitude
             });
 
-            return res.status(200).json({ message: "A tua ocorrência foi atualizada com sucesso!", occurrence });
+            return res.status(200).json({ message: "Occurrence updated successfully!", occurrence });
         }
 
     } catch (error) {
-        return res.status(500).json({ message: error.message || "Erro ao atualizar ocorrência." });
+        return res.status(500).json({ message: error.message || "Error updating occurrence." });
     }
 }
 
-// delete an occurrence
+
+// ==========================================
+// Delete an Occurrence
+// ==========================================
 export const deleteOccurrence = async (req, res, next) => {
     try {
         const { occurrence_id } = req.params;
@@ -198,42 +212,45 @@ export const deleteOccurrence = async (req, res, next) => {
         const occurrence = await Occurrence.findByPk(occurrence_id);
 
         if (!occurrence) {
-            return res.status(404).json({ message: "Ocorrência não encontrada." });
+            return res.status(404).json({ message: "Occurrence not found." });
         }
 
         if (profileType === 'admin') {
             await occurrence.destroy();
-            return res.status(200).json({ message: "Ocorrência removida pelo Administrador com sucesso!" });
+            return res.status(200).json({ message: "Occurrence removed by Administrator successfully!" });
         }
 
-        if (profileType === 'funcionario') {
-            return res.status(403).json({ message: "Acesso proibido. Os funcionários apenas podem tratar ocorrências, não as eliminar." });
+        if (profileType === 'staff') {
+            return res.status(403).json({ message: "Access denied. Staff members can only handle occurrences, not delete them." });
         }
 
         if (occurrence.user_id !== userId) {
-            return res.status(403).json({ message: "Acesso proibido. Não podes eliminar uma ocorrência que não te pertence." });
+            return res.status(403).json({ message: "Access denied. You cannot delete an occurrence that is not yours." });
         }
 
         if (occurrence.status_id !== 1) {
-            return res.status(400).json({ message: "Já não podes eliminar esta ocorrência porque ela já está a ser tratada." });
+            return res.status(400).json({ message: "You cannot delete an occurrence that is already being processed by a staff member." });
         }
 
         await occurrence.destroy();
-        return res.status(200).json({ message: "A tua ocorrência foi eliminada com sucesso!" });
+        return res.status(200).json({ message: "Occurrence deleted successfully!" });
 
     } catch (error) {
-        return res.status(500).json({ message: error.message || "Erro ao eliminar ocorrência." });
+        return res.status(500).json({ message: error.message || "Error deleting occurrence." });
     }
 }
 
-// get all photos from an occurrence
+
+// ==========================================
+// Get all Photos from an Occurrence
+// ==========================================
 export const getPhotos = async (req, res, next) => {
     try {
         const { occurrence_id } = req.params;
 
         const occurrence = await Occurrence.findByPk(occurrence_id);
         if (!occurrence) {
-            return res.status(404).json({ message: "Ocorrência não encontrada." });
+            return res.status(404).json({ message: "Occurrence not found." });
         }
 
         const photos = await OccurrencePhoto.findAll({
@@ -242,52 +259,58 @@ export const getPhotos = async (req, res, next) => {
 
         return res.status(200).json(photos);
     } catch (error) {
-        return res.status(500).json({ message: error.message || "Erro ao obter fotografias." });
+        return res.status(500).json({ message: error.message || "Error fetching photos." });
     }
 }
 
-// upload an occurrence photo
+
+// ==========================================
+// Upload an Occurrence Photo
+// ==========================================
 export const uploadPhoto = async (req, res, next) => {
     try {
         const { occurrence_id } = req.params;
 
         const occurrence = await Occurrence.findByPk(occurrence_id);
         if (!occurrence) {
-            return res.status(404).json({ message: "Ocorrência não encontrada." });
+            return res.status(404).json({ message: "Occurrence not found." });
         }
 
         if (!req.file) {
-            return res.status(400).json({ message: "Por favor, selecione um ficheiro." });
+            return res.status(400).json({ message: "Please select a file." });
         }
 
         const newPhoto = await OccurrencePhoto.create({
             occurrence_id,
-            photo_url: `${req.file.path}`, // Injeta perfeitamente o link seguro da Cloud
+            photo_url: `${req.file.path}`,
             upload_date: new Date() 
         });
 
         return res.status(201).json({
-            message: "Fotografia adicionada com sucesso!",
+            message: "Photo uploaded successfully!",
             photo: newPhoto
         });
     } catch (error) {
-        return res.status(500).json({ message: error.message || "Erro ao fazer upload." });
+        return res.status(500).json({ message: error.message || "Error uploading photo." });
     }
 }
 
-// delete an occurrence photo
+
+// ==========================================
+// Delete an Occurrence Photo
+// ==========================================
 export const deletePhoto = async (req, res, next) => {
     try {
         const { photo_id } = req.params;
 
         const photo = await OccurrencePhoto.findByPk(photo_id);
         if (!photo) {
-            return res.status(404).json({ message: "Fotografia não encontrada." });
+            return res.status(404).json({ message: "Photo not found." });
         }
 
         await photo.destroy();
-        return res.status(200).json({ message: "Fotografia eliminada com sucesso!" });
+        return res.status(200).json({ message: "Photo deleted successfully!" });
     } catch (error) {
-        return res.status(500).json({ message: error.message || "Erro ao eliminar fotografia." });
+        return res.status(500).json({ message: error.message || "Error deleting photo." });
     }
 }

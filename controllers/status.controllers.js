@@ -1,6 +1,8 @@
 import { Status } from "../models/db.config.js";
 
-// get all statuses
+// ==========================================
+// Retrieve all Status
+// ==========================================
 export const getAllStatus = async (req, res, next) => {
     try {
         const statuses = await Status.findAll();
@@ -11,24 +13,27 @@ export const getAllStatus = async (req, res, next) => {
     }
 }
 
-// create a new status
+
+// ==========================================
+// Create a New Status
+// ==========================================
 export const createStatus = async (req, res, next) => {
     try {
         const { status_name } = req.body;
 
-        // Proteção extra no controlador
+        // check if logged-in user is an admin
         if (req.loggedUser.profile_type !== 'admin') {
             return res.status(403).json({ message: "Access denied. Only administrators can create statuses." });
         }
 
-        // Validação com trim() para evitar nomes vazios
+        // Avoid creating statuses with empty or whitespace-only names
         if (!status_name || status_name.trim() === "") {
             return res.status(400).json({ message: "The status name is required and cannot be empty." });
         }
 
         const cleanName = status_name.trim();
 
-        // Evitar statuses duplicados com o mesmo nome
+        // Avoid creating duplicate statuses with the same name
         const statusExists = await Status.findOne({ where: { status_name: cleanName } });
         if (statusExists) {
             return res.status(409).json({ message: `A status with this name (${cleanName}) already exists.` });
@@ -46,13 +51,16 @@ export const createStatus = async (req, res, next) => {
     }
 }
 
-// update a status
+
+// ==========================================
+// Edit a Status
+// ==========================================
 export const updateStatus = async (req, res, next) => {
     try {
         const { status_id } = req.params;
         const { status_name } = req.body;
 
-        // Proteção extra no controlador
+        // check if logged-in user is an admin
         if (req.loggedUser.profile_type !== 'admin') {
             return res.status(403).json({ message: "Access denied. Only administrators can update statuses." });
         }
@@ -68,7 +76,7 @@ export const updateStatus = async (req, res, next) => {
 
         const cleanName = status_name.trim();
 
-        // Verificar se já existe OUTRO estado com esse nome
+        // check for name conflicts with other status (excluding the current status)
         const nameConflict = await Status.findOne({ where: { status_name: cleanName } });
         if (nameConflict && String(nameConflict.status_id) !== String(status_id)) {
             return res.status(409).json({ message: "Another status with this name already exists." });
@@ -87,12 +95,15 @@ export const updateStatus = async (req, res, next) => {
     }
 }
 
-// delete a status
+
+// ==========================================
+// Delete a Status
+// ==========================================
 export const deleteStatus = async (req, res, next) => {
     try {
         const { status_id } = req.params;
 
-        // Proteção extra no controlador
+        // check if logged-in user is an admin
         if (req.loggedUser.profile_type !== 'admin') {
             return res.status(403).json({ message: "Access denied. Only administrators can delete statuses." });
         }
@@ -106,6 +117,8 @@ export const deleteStatus = async (req, res, next) => {
         return res.status(200).json({ message: "Status deleted successfully!" });
     } catch (error) {
         console.error("Error in deleteStatus:", error);
+
+        // if the error is due to foreign key constraints (e.g., category is associated with existing occurrences), return a specific message
         return res.status(500).json({ 
             message: "Error deleting status. Make sure it is not associated with any occurrences or status history." 
         });

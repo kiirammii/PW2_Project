@@ -2,12 +2,14 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/db.config.js';
 
-// create a new account
+// ==========================================
+// Create a New User
+// ==========================================
 export const registerUser = async (req, res, next) => {
     try {
         const { user_name, email, password, profile_type: requestedProfileType } = req.body;
 
-        // Validar se todos os campos obrigatórios vieram no body (profile_type is optional)
+        // validate required fields
         if (!user_name || !email || !password) {
             return res.status(400).json({ message: "All fields (user_name, email, password) are required." });
         }
@@ -19,24 +21,24 @@ export const registerUser = async (req, res, next) => {
             return res.status(400).json({ message: "Invalid profile type. Use: admin, staff, or student_teacher." });
         }
 
-        // Students and teachers must register with an institutional email
+        // students and teachers must register with institutional email addresses
         if (profile_type === 'student_teacher') {
             if (!email.includes('esmad.ipp.pt') && !email.includes('esht.ipp.pt')) {
                 return res.status(400).json({ message: "Students and Teachers must register with the institutional email." });
             }
         }
 
-        // Verificar se o email já está registado
+        // verify if the email is already registered
         const userExists = await User.findOne({ where: { email } });
         if (userExists) {
             return res.status(409).json({ message: "This email is already registered." });
         }
 
-        // Encriptar a password com bcrypt por segurança
+        // encrypt the password before saving to the database
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Criar o utilizador na base de dados
+        // create the new user in the database
         const newUser = await User.create({
             user_name,
             email,
@@ -61,40 +63,40 @@ export const registerUser = async (req, res, next) => {
     }
 };
 
-// login
+
+// ==========================================
+// Authenticate an User
+// ==========================================
 export const loginUser = async (req, res, next) => {
     try {
         const { email, password } = req.body;
-
+        
+        // validate required fields
         if (!email || !password) {
             return res.status(400).json({ message: "Email and password are required." });
         }
 
-        // Procurar o utilizador pelo email
+        // search for the user by email
         const user = await User.findOne({ where: { email } });
         if (!user) {
             return res.status(401).json({ message: "Invalid credentials." });
         }
 
-        // Verificar se o utilizador está suspenso
+        // verify if the user is suspended
         if (user.state === 'suspended') {
             return res.status(403).json({ message: "Your account is suspended. Contact an administrator." });
         }
 
-        // Comparar a password enviada com a password encriptada na BD
+        // compare the provided password with the hashed password in the database
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             return res.status(401).json({ message: "Invalid credentials." });
         }
 
-        // Traduz o perfil da BD de volta para 'staff' para que os teus middlewares 
-        // e os controladores das ocorrências (que esperam 'staff') funcionem em harmonia
-        const webProfileType = user.profile_type === 'staff' ? 'staff' : user.profile_type;
-
-        // Gerar o Token JWT
-        const secretKey = process.env.JWT_SECRET || 'chave_secreta_provisoria_pw2';
+        // generate the JWT Token
+        const secretKey = process.env.JWT_SECRET || 'temporary_secret_key';
         const token = jwt.sign(
-            { user_id: user.user_id, profile_type: webProfileType },
+            { user_id: user.user_id, profile_type: user.profile_type },
             secretKey,
             { expiresIn: '1d' }
         );
@@ -105,7 +107,7 @@ export const loginUser = async (req, res, next) => {
             user: {
                 user_id: user.user_id,
                 user_name: user.user_name,
-                profile_type: webProfileType
+                profile_type: user.profile_type
             }
         });
 
@@ -115,7 +117,10 @@ export const loginUser = async (req, res, next) => {
     }
 }
 
-// get all users
+
+// ==========================================
+// Retrieve all Users
+// ==========================================
 export const getAllUsers = async (req, res, next) => {
     try {
         const users = await User.findAll({
@@ -128,13 +133,16 @@ export const getAllUsers = async (req, res, next) => {
     }
 }
 
-// update an user
+
+// ==========================================
+// Edit an User
+// ==========================================
 export const updateUser = async (req, res, next) => {
     try {
         const { user_id } = req.params;
         const { user_name, email, state, profile_type } = req.body;
 
-        // SECURITY: If not admin, can only edit their own profile ID
+        // if not admin, can only edit their own profile ID
         if (req.loggedUser.profile_type !== 'admin' && String(req.loggedUser.user_id) !== String(user_id)) {
             return res.status(403).json({ message: "Access denied. You cannot edit other users' profiles." });
         }
@@ -147,21 +155,21 @@ export const updateUser = async (req, res, next) => {
         if (user_name) user.user_name = user_name;
         if (email) user.email = email;
         
-        // Only admins can suspend/activate users
+        // only admins can suspend/activate users
         if (state && req.loggedUser.profile_type === 'admin') {
             user.state = state;
         }
 
-        // Only admins can change the profile_type
+        // only admins can change the profile_type
         if (profile_type && req.loggedUser.profile_type === 'admin') {
             
-            // Validate directly against the English DB terms
+            // validate directly against the English DB terms
             const allowedProfiles = ['student_teacher', 'staff', 'admin'];
             if (!allowedProfiles.includes(profile_type)) {
                 return res.status(400).json({ message: "Invalid profile type. Use: admin, staff, or student_teacher." });
             }
 
-            // Protection: an admin cannot remove their own admin privileges via this route
+            // admin cannot remove their own admin privileges via this route
             if (String(req.loggedUser.user_id) === String(user_id) && profile_type !== 'admin') {
                 return res.status(400).json({ message: "You cannot remove your own administrator privileges." });
             }
@@ -188,12 +196,15 @@ export const updateUser = async (req, res, next) => {
     }
 }
 
-// delete an user
+
+// ==========================================
+// Delete an User
+// ==========================================
 export const deleteUser = async (req, res, next) => {
     try {
         const { user_id } = req.params;
 
-        // Proteção extra: impede que utilizadores comuns acessem o delete caso o middleware falhe
+        // only admins can delete users
         if (req.loggedUser.profile_type !== 'admin') {
             return res.status(403).json({ message: "Access denied. Only administrators can delete users." });
         }

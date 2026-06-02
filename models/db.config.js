@@ -105,25 +105,25 @@ const ensureDefaultAdminUser = async () => {
 // RELATIONS BETWEEN MODELS
 // ==========================================
 
-// 1. Relações do Utilizador (User)
+// User Relations
 User.hasMany(Occurrence, { foreignKey: 'user_id' });
 Occurrence.belongsTo(User, { foreignKey: 'user_id' });
 
 User.hasMany(Comment, { foreignKey: 'user_id' });
 Comment.belongsTo(User, { foreignKey: 'user_id' });
 
-// 2. Relações da Categoria (Category)
+// Category Relations
 Category.hasMany(Occurrence, { foreignKey: 'category_id' });
 Occurrence.belongsTo(Category, { foreignKey: 'category_id' });
 
-// 3. Relações do Estado (Status)
+// Status Relations
 Status.hasMany(Occurrence, { foreignKey: 'status_id' });
 Occurrence.belongsTo(Status, { foreignKey: 'status_id' });
 
 Status.hasMany(StatusHistory, { foreignKey: 'status_id' });
 StatusHistory.belongsTo(Status, { foreignKey: 'status_id' });
 
-// 4. Relações da Ocorrência (Occurrence) com os Sub-recursos (Fotos, Comentários, Histórico)
+// Occurrence Relations with Sub-resources (Photos, Comments, History)
 Occurrence.hasMany(OccurrencePhoto, { foreignKey: 'occurrence_id', onDelete: 'CASCADE' });
 OccurrencePhoto.belongsTo(Occurrence, { foreignKey: 'occurrence_id' });
 

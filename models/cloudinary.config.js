@@ -2,21 +2,21 @@ import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import multer from 'multer';
 
-// 1. Configuração com as variáveis do slide da stora
+// configuration
 cloudinary.config({
     cloud_name: process.env.C_CLOUD_NAME,
     api_key: process.env.C_API_KEY,
     api_secret: process.env.C_API_SECRET
 });
 
-// 2. Definir onde e como as imagens vão ser guardadas no Cloudinary
+// define how and where the files should be stored in Cloudinary
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
-        folder: 'ocorrencias_fotos', // Nome da pasta que vai ser criada no Cloudinary
-        allowed_formats: ['jpg', 'jpeg', 'png'], // Formatos permitidos
+        folder: 'ocorrencias_fotos',
+        allowed_formats: ['jpg', 'jpeg', 'png'],
     },
 });
 
-// 3. Criar o middleware do Multer configurado com a Cloud
+// create a multer instance with the defined storage
 export const upload = multer({ storage: storage });

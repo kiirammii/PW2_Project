@@ -1,6 +1,8 @@
 import { Category } from '../models/db.config.js';
 
-// get all categories
+// ==========================================
+// Retrieve all Categories
+// ==========================================
 export const getAllCategory = async (req, res, next) => {
     try {
         const categories = await Category.findAll();
@@ -11,24 +13,27 @@ export const getAllCategory = async (req, res, next) => {
     }
 }
 
-// create a new category
+
+// ==========================================
+// Create a New Category 
+// ==========================================
 export const createCategory = async (req, res, next) => {
     try {
         const { category_name } = req.body;
 
-        // Proteção extra no controlador
+        // check if logged-in user is an admin
         if (req.loggedUser.profile_type !== 'admin') {
             return res.status(403).json({ message: "Access denied. Only administrators can create categories." });
         }
 
-        // Validação com trim() para evitar nomes vazios ou cheios de espaços
+        // avoid creating categories with empty or whitespace-only names
         if (!category_name || category_name.trim() === "") {
             return res.status(400).json({ message: "The category name is required and cannot be empty." });
         }
 
         const cleanName = category_name.trim();
 
-        // Evitar categorias duplicadas com o mesmo nome
+        // avoid creating duplicate categories with the same name
         const categoryExists = await Category.findOne({ where: { category_name: cleanName } });
         if (categoryExists) {
             return res.status(409).json({ message: `A category with this name (${cleanName}) already exists.` });
@@ -40,19 +45,23 @@ export const createCategory = async (req, res, next) => {
             message: "Category created successfully!",
             category: newCategory
         });
+
     } catch (error) {
         console.error("Error in createCategory:", error);
         return res.status(500).json({ message: "Error creating category." });
     }
 }
 
-// update a category
+
+// ==========================================
+// Edit a Category
+// ==========================================
 export const updateCategory = async (req, res, next) => {
     try {
         const { category_id } = req.params;
         const { category_name } = req.body;
 
-        // Proteção extra no controlador
+        // check if logged-in user is an admin
         if (req.loggedUser.profile_type !== 'admin') {
             return res.status(403).json({ message: "Access denied. Only administrators can update categories." });
         }
@@ -68,7 +77,7 @@ export const updateCategory = async (req, res, next) => {
 
         const cleanName = category_name.trim();
 
-        // Verificar se já existe OUTRA categoria com esse nome para não gerar conflitos
+        // check for name conflicts with other categories (excluding the current category)
         const nameConflict = await Category.findOne({ where: { category_name: cleanName } });
         if (nameConflict && String(nameConflict.category_id) !== String(category_id)) {
             return res.status(409).json({ message: "Another category with this name already exists." });
@@ -87,12 +96,15 @@ export const updateCategory = async (req, res, next) => {
     }
 }
 
-// delete a category
+
+// ==========================================
+// Delete a Category
+// ==========================================
 export const deleteCategory = async (req, res, next) => {
     try {
         const { category_id } = req.params;
 
-        // Proteção extra no controlador
+        // check if logged-in user is an admin
         if (req.loggedUser.profile_type !== 'admin') {
             return res.status(403).json({ message: "Access denied. Only administrators can delete categories." });
         }
@@ -106,7 +118,8 @@ export const deleteCategory = async (req, res, next) => {
         return res.status(200).json({ message: "Category deleted successfully!" });
     } catch (error) {
         console.error("Error in deleteCategory:", error);
-        // Resposta inteligente caso o MySQL bloqueie a eliminação por haver chaves estrangeiras ativas
+
+        // if the error is due to foreign key constraints (e.g., category is associated with existing occurrences), return a specific message
         return res.status(500).json({ 
             message: "Error deleting category. Make sure it is not associated with any existing occurrences." 
         });
