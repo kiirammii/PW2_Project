@@ -166,29 +166,46 @@ export const updateUser = async (req, res, next) => {
             return res.status(403).json({ message: "Access denied. You cannot edit other users' profiles." });
         }
 
+        // find User
         const user = await User.findByPk(user_id);
         if (!user) {
             return res.status(404).json({ message: "User not found." });
         }
 
-        if (user_name) user.user_name = user_name;
-        if (email) user.email = email;
+        // validate and update: user_name
+        if (user_name !== undefined) {
+            if (typeof user_name !== 'string' || user_name.trim().length < 3) {
+                return res.status(400).json({ message: "Invalid name. It must be a text with at least 3 characters." });
+            }
+            user.user_name = user_name.trim();
+        }
+
+        // validate and update: email
+        if (email !== undefined) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (typeof email !== 'string' || !emailRegex.test(email)) {
+                return res.status(400).json({ message: "Invalid email format." });
+            }
+            user.email = email.trim().toLowerCase();
+        }
         
-        // only admins can suspend/activate users
+        // validate and update: state (admin)
         if (state && req.loggedUser.profile_type === 'admin') {
+            const allowedStates = ['active', 'suspended'];
+            if (!allowedStates.includes(state)) {
+                return res.status(400).json({ message: "Invalid state. Use: active or suspended." });
+            }
             user.state = state;
         }
 
-        // only admins can change the profile_type
+        // validate and update: profile_type (admin)
         if (profile_type && req.loggedUser.profile_type === 'admin') {
-            
-            // validate directly against the English DB terms
             const allowedProfiles = ['student_teacher', 'staff', 'admin'];
             if (!allowedProfiles.includes(profile_type)) {
-                return res.status(400).json({ message: "Invalid profile type. Use: admin, staff, or student_teacher." });
+                return res.status(400).json({ message: "Invalid profile type. Use: admin, staff or student_teacher." });
             }
 
-            // admin cannot remove their own admin privileges via this route
+            // admin cannot remove their own admin privileges
             if (String(req.loggedUser.user_id) === String(user_id) && profile_type !== 'admin') {
                 return res.status(400).json({ message: "You cannot remove your own administrator privileges." });
             }
@@ -196,6 +213,7 @@ export const updateUser = async (req, res, next) => {
             user.profile_type = profile_type;
         }
 
+        // save into DB
         await user.save();
 
         return res.status(200).json({

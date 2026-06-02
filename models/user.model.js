@@ -22,11 +22,13 @@ export default (sequelize, DataTypes) => sequelize.define("user", {
     },
     profile_type: {
         type: DataTypes.ENUM('student_teacher', 'staff', 'admin'),
+        defaultValue: 'student_teacher',
         allowNull: false
     },
     state: {
         type: DataTypes.ENUM('active', 'suspended'),
-        defaultValue: 'active'
+        defaultValue: 'active',
+        allowNull: false
     }
     }, {
         timestamps: false
