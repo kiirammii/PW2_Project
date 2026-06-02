@@ -19,8 +19,8 @@ import userRoutes from './routes/user.routes.js';
 
 // apply express router for each routes file
 app.use('/categories', categoryRoutes);
-app.use('/comments', commentRoutes);
 app.use('/occurrences', occurrenceRoutes);
+app.use('/occurrences/:occurrence_id/comments', commentRoutes);
 app.use('/status', statusRoutes);
 app.use('/users', userRoutes);
 

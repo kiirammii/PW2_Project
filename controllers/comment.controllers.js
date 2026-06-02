@@ -62,23 +62,27 @@ export const createComment = async (req, res, next) => {
 // mark a comment as inappropriate
 export const flagComment = async (req, res, next) => {
     try {
-        const { comment_id } = req.params;
+        const { occurrence_id, comment_id } = req.params;
         const userId = req.loggedUser.user_id;
         const profileType = req.loggedUser.profile_type;
+
+        const occurrence = await Occurrence.findByPk(occurrence_id);
+        if (!occurrence) {
+            return res.status(404).json({ message: "Ocorrência não encontrada." });
+        }
 
         const comment = await Comment.findByPk(comment_id);
         if (!comment) {
             return res.status(404).json({ message: "Comentário não encontrado." });
         }
 
+        if (comment.occurrence_id !== Number(occurrence_id)) {
+            return res.status(404).json({ message: "Comentário não encontrado nesta ocorrência." });
+        }
+
         // REGRA DO ENUNCIADO: Funcionários e Admins podem sinalizar tudo.
         // Utilizador comum só sinaliza se for na ocorrência que ELE PRÓPRIO criou.
         if (profileType !== 'admin' && profileType !== 'funcionario') {
-            const occurrence = await Occurrence.findByPk(comment.occurrence_id);
-            if (!occurrence) {
-                return res.status(404).json({ message: "Ocorrência não encontrada." });
-            }
-            
             if (occurrence.user_id !== userId) {
                 return res.status(403).json({ 
                     message: "Acesso proibido. Apenas podes sinalizar comentários nas ocorrências que tu criaste." 
@@ -100,16 +104,25 @@ export const flagComment = async (req, res, next) => {
 // delete a comment (Only Admin)
 export const deleteComment = async (req, res, next) => {
     try {
-        const { comment_id } = req.params;
+        const { occurrence_id, comment_id } = req.params;
         const profileType = req.loggedUser.profile_type;
 
         if (profileType !== 'admin') {
             return res.status(403).json({ message: "Acesso proibido. Apenas Administradores podem remover comentários." });
         }
 
+        const occurrence = await Occurrence.findByPk(occurrence_id);
+        if (!occurrence) {
+            return res.status(404).json({ message: "Ocorrência não encontrada." });
+        }
+
         const comment = await Comment.findByPk(comment_id);
         if (!comment) {
             return res.status(404).json({ message: "Comentário não encontrado." });
+        }
+
+        if (comment.occurrence_id !== Number(occurrence_id)) {
+            return res.status(404).json({ message: "Comentário não encontrado nesta ocorrência." });
         }
 
         await comment.destroy();

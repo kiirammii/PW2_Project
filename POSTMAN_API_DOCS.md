@@ -364,7 +364,7 @@ Common errors to test:
 - Occurrence not found -> `404`
 - Comment on a resolved occurrence -> `400`
 
-#### `PATCH /comments/:comment_id`
+#### `PATCH /occurrences/:occurrence_id/comments/:comment_id`
 Flag a comment as inappropriate.
 
 No body required.
@@ -378,7 +378,7 @@ Common errors to test:
 - Comment not found -> `404`
 - User not allowed to flag that comment -> `403`
 
-#### `DELETE /comments/:comment_id`
+#### `DELETE /occurrences/:occurrence_id/comments/:comment_id`
 Delete a comment.
 
 No body required.
@@ -426,7 +426,7 @@ Try admin-only endpoints like:
 - `POST /status`
 - `PUT /status/:status_id`
 - `DELETE /status/:status_id`
-- `DELETE /comments/:comment_id`
+- `DELETE /occurrences/:occurrence_id/comments/:comment_id`
 
 Expected response:
 - `403`
@@ -456,8 +456,8 @@ Your project also has `PATCH` routes in addition to `POST`, `PUT`, and `DELETE`.
 
 ## Changelog (2026-05-31)
 
-- Fixed: Comment route mapping bug that caused `PATCH /comments/:comment_id` and `DELETE /comments/:comment_id` to resolve incorrectly when mounted under the `/comments` router. The routes now match the documented API shape.
-- Fixed: Added explicit `404` responses when an occurrence ID does not exist for comment-related endpoints (`GET /occurrences/:occurrence_id/comments` and `PATCH /comments/:comment_id`).
+- Fixed: Comment routes now follow a nested occurrence-first shape: `GET`/`POST /occurrences/:occurrence_id/comments` and `PATCH`/`DELETE /occurrences/:occurrence_id/comments/:comment_id`.
+- Fixed: Added explicit `404` responses when an occurrence ID does not exist for comment-related endpoints.
 - Note: The `DELETE /occurrences/:occurrence_id/photos/:photo_id` endpoint is protected by authentication but the controller currently does not enforce owner/admin authorization. Consider adding an ownership or role check if photo deletion should be restricted to the occurrence owner or admins/staff.
 
 These changes have been applied in the repository and pushed on branch `fix/comment-routes-and-404s`.
