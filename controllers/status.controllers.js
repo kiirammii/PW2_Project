@@ -1,4 +1,4 @@
-import { Status } from "../models/db.config.js";
+import { Occurrence, Status } from "../models/db.config.js";
 
 // ==========================================
 // Retrieve all Status
@@ -104,13 +104,25 @@ export const deleteStatus = async (req, res, next) => {
         const { status_id } = req.params;
 
         // check if logged-in user is an admin
-        if (req.loggedUser.profile_type !== 'admin') {
+        if (req.loggedUser?.profile_type !== 'admin') {
             return res.status(403).json({ message: "Access denied. Only administrators can delete statuses." });
         }
 
-        const status = await Status.findByPk(status_id);
+        const statusId = Number(status_id);
+        if (Number.isNaN(statusId)) {
+            return res.status(400).json({ message: "The status ID must be a valid number." });
+        }
+
+        const status = await Status.findByPk(statusId);
         if (!status) {
             return res.status(404).json({ message: "Status not found." });
+        }
+
+        const linkedOccurrences = await Occurrence.count({ where: { status_id: statusId } });
+        if (linkedOccurrences) {
+            return res.status(409).json({
+                message: "Cannot delete status. There are existing occurrences associated with it."
+            });
         }
 
         await status.destroy();
@@ -118,9 +130,8 @@ export const deleteStatus = async (req, res, next) => {
     } catch (error) {
         console.error("Error in deleteStatus:", error);
 
-        // if the error is due to foreign key constraints, return a specific message
         return res.status(500).json({ 
-            message: "Error deleting status. Make sure it is not associated with any occurrences or status history." 
+            message: "Error deleting status." 
         });
     }
 }
