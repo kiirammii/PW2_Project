@@ -1,4 +1,4 @@
-import { Occurrence, Status } from "../models/db.config.js";
+import { Status, Occurrence } from "../models/db.config.js";
 
 // ==========================================
 // Retrieve all Status
@@ -26,30 +26,37 @@ export const createStatus = async (req, res, next) => {
             return res.status(403).json({ message: "Access denied. Only administrators can create statuses." });
         }
 
-        // Avoid creating statuses with empty or whitespace-only names
+        // status name must be a valid text string
+        if (status_name !== undefined && typeof status_name !== 'string') {
+            return res.status(400).json({ message: "The status name must be a valid text string." });
+        }
+        // ---------------------------------------------------------
+
+        // avoid creating statuses with empty or whitespace-only names
         if (!status_name || status_name.trim() === "") {
             return res.status(400).json({ message: "The status name is required and cannot be empty." });
         }
 
         const cleanName = status_name.trim();
 
-        // Avoid creating duplicate statuses with the same name
+        // avoid creating duplicate statuses with the same name
         const statusExists = await Status.findOne({ where: { status_name: cleanName } });
         if (statusExists) {
             return res.status(409).json({ message: `A status with this name (${cleanName}) already exists.` });
         }
 
         const newStatus = await Status.create({ status_name: cleanName });
-        
+
         return res.status(201).json({
             message: "Status created successfully!",
             status: newStatus
         });
+
     } catch (error) {
         console.error("Error in createStatus:", error);
         return res.status(500).json({ message: "Error creating status." });
     }
-}
+};
 
 
 // ==========================================

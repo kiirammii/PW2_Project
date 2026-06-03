@@ -26,6 +26,11 @@ export const createCategory = async (req, res, next) => {
             return res.status(403).json({ message: "Access denied. Only administrators can create categories." });
         }
 
+        // category name must be a valid text string
+        if (category_name !== undefined && typeof category_name !== 'string') {
+            return res.status(400).json({ message: "The category name must be a valid text string." });
+        }
+
         // avoid creating categories with empty or whitespace-only names
         if (!category_name || category_name.trim() === "") {
             return res.status(400).json({ message: "The category name is required and cannot be empty." });

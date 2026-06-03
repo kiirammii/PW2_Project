@@ -1,4 +1,4 @@
-import { Occurrence, StatusHistory, OccurrencePhoto} from '../models/db.config.js';
+import { Category, Occurrence, StatusHistory, OccurrencePhoto} from '../models/db.config.js';
 
 // ==========================================
 // Retrieve all Occurrences (with statistics for admin and staff users)
@@ -89,6 +89,12 @@ export const createOccurrence = async (req, res, next) => {
         if (category_id && isNaN(Number(category_id))) {
             errors.push({ field: "category_id", message: "Category ID must be a valid number." });
         }
+
+        const category = await Category.findByPk(category_id);
+        if (!category) {
+            return res.status(404).json({ message: "This category does not exist." });
+        }
+
         if ((latitude !== undefined && latitude !== null) && isNaN(Number(latitude))) {
             errors.push({ field: "latitude", message: "Latitude must be a valid number." });
         }

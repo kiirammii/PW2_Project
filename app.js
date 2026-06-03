@@ -11,7 +11,6 @@ app.use(express.json());
 
 // import express router for carts & products resources
 import categoryRoutes from './routes/category.routes.js';
-import commentRoutes from './routes/comment.routes.js';
 import occurrenceRoutes from './routes/occurrence.routes.js';
 import statusRoutes from './routes/status.routes.js';
 import userRoutes from './routes/user.routes.js';
@@ -20,7 +19,6 @@ import userRoutes from './routes/user.routes.js';
 // apply express router for each routes file
 app.use('/categories', categoryRoutes);
 app.use('/occurrences', occurrenceRoutes);
-app.use('/occurrences/:occurrence_id/comments', commentRoutes);
 app.use('/status', statusRoutes);
 app.use('/users', userRoutes);
 

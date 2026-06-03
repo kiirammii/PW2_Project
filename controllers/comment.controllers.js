@@ -25,37 +25,50 @@ export const getCommentsByOccurrence = async (req, res, next) => {
 export const createComment = async (req, res, next) => {
     try {
         const { occurrence_id } = req.params;
-        const { content } = req.body;
+        const { content } = req.body || {};
         const userId = req.loggedUser.user_id;
+        
+        // 1. CONVERTE EXPLICITAMENTE PARA NÚMERO INTEIRO
+        const numericOccurrenceId = parseInt(occurrence_id, 10);
+
+        // Se por acaso não for um número válido (ex: mandaram "abc" no URL)
+        if (isNaN(numericOccurrenceId)) {
+            return res.status(400).json({ message: "Occurrence ID must be a valid number." });
+        }
+
+        // 2. BUSCA NA BD USANDO O ID JÁ CONVERTIDO PARA NÚMERO
+        const occurrence = await Occurrence.findByPk(numericOccurrenceId);
+        if (!occurrence) {
+            return res.status(404).json({ message: "Occurrence not found." });
+        }
+
+        // 3. VALIDAÇÕES DO CONTEÚDO
+        if (content !== undefined && typeof content !== 'string') {
+            return res.status(400).json({ message: "The comment content must be a valid text." });
+        }
 
         if (!content || content.trim() === "") {
-            return res.status(400).json({ message: "O conteúdo do comentário é obrigatório." });
+            return res.status(400).json({ message: "The comment content is required." });
         }
-
-        const occurrence = await Occurrence.findByPk(occurrence_id);
-        if (!occurrence) {
-            return res.status(404).json({ message: "Ocorrência não encontrada." });
-        }
-
-        // REGRA DO ENUNCIADO: Só pode comentar em ocorrências NÃO resolvidas
-        // Assumindo que o status_id da ocorrência "resolvida" é 4 (ajusta se for outro id na tua BD)
+        
         if (occurrence.status_id === 4) {
-            return res.status(400).json({ message: "Não é possível comentar em ocorrências já resolvidas." });
+            return res.status(400).json({ message: "You can't comment on already resolved occurrences." });
         }
 
+        // 4. CRIAÇÃO DO COMENTÁRIO
         const newComment = await Comment.create({
-            occurrence_id,
+            occurrence_id: numericOccurrenceId, // Usa o número aqui também
             user_id: userId,
             content: content.trim(),
             creation_date: new Date()
         });
 
         return res.status(201).json({
-            message: "Comentário adicionado com sucesso!",
+            message: "Comment added successfully!",
             comment: newComment
         });
     } catch (error) {
-        return res.status(500).json({ message: error.message || "Erro ao criar comentário." });
+        return res.status(500).json({ message: error.message || "Error creating comment." });
     }
 };
 
