@@ -1,4 +1,5 @@
 import { Category, Occurrence, StatusHistory, OccurrencePhoto} from '../models/db.config.js';
+import { v2 as cloudinary } from 'cloudinary';
 
 // ==========================================
 // Retrieve all Occurrences (with statistics for admin and staff users)
@@ -267,13 +268,21 @@ export const getPhotos = async (req, res, next) => {
     try {
         const { occurrence_id } = req.params;
 
-        const occurrence = await Occurrence.findByPk(occurrence_id);
+        // --- CONVERSÃO EXPLICITA PARA NÚMERO ---
+        const numericOccurrenceId = parseInt(occurrence_id, 10);
+
+        if (isNaN(numericOccurrenceId)) {
+            return res.status(400).json({ message: "The provided occurrence ID must be a valid number." });
+        }
+        // ----------------------------------------
+
+        const occurrence = await Occurrence.findByPk(numericOccurrenceId);
         if (!occurrence) {
             return res.status(404).json({ message: "Occurrence not found." });
         }
 
         const photos = await OccurrencePhoto.findAll({
-            where: { occurrence_id }
+            where: { occurrence_id: numericOccurrenceId }
         });
 
         return res.status(200).json(photos);
@@ -289,19 +298,45 @@ export const getPhotos = async (req, res, next) => {
 export const uploadPhoto = async (req, res, next) => {
     try {
         const { occurrence_id } = req.params;
+        const userId = req.loggedUser.user_id;
+        const profileType = req.loggedUser.profile_type;
 
-        const occurrence = await Occurrence.findByPk(occurrence_id);
+        // --- CONVERSÃO EXPLICITA PARA NÚMERO ---
+        const numericOccurrenceId = parseInt(occurrence_id, 10);
+
+        if (isNaN(numericOccurrenceId)) {
+            return res.status(400).json({ message: "The provided occurrence ID must be a valid number." });
+        }
+        // ----------------------------------------
+
+        const occurrence = await Occurrence.findByPk(numericOccurrenceId);
         if (!occurrence) {
             return res.status(404).json({ message: "Occurrence not found." });
         }
 
+        // --- VALIDAÇÃO DE ESTADO RESOLVIDO (STATUS 4) ---
+        if (occurrence.status_id === 4) {
+            return res.status(400).json({ 
+                message: "Cannot add photos to an occurrence that has already been resolved." 
+            });
+        }
+        // ------------------------------------------------
+
+        // REGRA DE ACESSO: Apenas o Admin OU o criador da ocorrência podem fazer upload
+        if (profileType !== 'admin' && occurrence.user_id !== userId) {
+            return res.status(403).json({ 
+                message: "Access denied. You can only upload photos to occurrences you created." 
+            });
+        }
+
+        // Se o Multer falhar ou não enviarem imagem, o req.file vem undefined
         if (!req.file) {
             return res.status(400).json({ message: "Please select a file." });
         }
 
         const newPhoto = await OccurrencePhoto.create({
-            occurrence_id,
-            photo_url: `${req.file.path}`,
+            occurrence_id: numericOccurrenceId,
+            photo_url: req.file.path, // Link direto do Cloudinary
             upload_date: new Date() 
         });
 
@@ -321,13 +356,53 @@ export const uploadPhoto = async (req, res, next) => {
 export const deletePhoto = async (req, res, next) => {
     try {
         const { photo_id } = req.params;
+        const userId = req.loggedUser.user_id;
+        const profileType = req.loggedUser.profile_type;
 
-        const photo = await OccurrencePhoto.findByPk(photo_id);
+        // --- CONVERSÃO EXPLICITA PARA NÚMERO ---
+        const numericPhotoId = parseInt(photo_id, 10);
+        if (isNaN(numericPhotoId)) {
+            return res.status(400).json({ message: "The provided photo ID must be a valid number." });
+        }
+        // ----------------------------------------
+
+        // 1. Encontrar a foto
+        const photo = await OccurrencePhoto.findByPk(numericPhotoId);
         if (!photo) {
             return res.status(404).json({ message: "Photo not found." });
         }
 
+        // 2. Encontrar a ocorrência para saber quem é o dono
+        const occurrence = await Occurrence.findByPk(photo.occurrence_id);
+        if (!occurrence) {
+            return res.status(404).json({ message: "Associated occurrence not found." });
+        }
+
+        // 3. REGRA DE ACESSO: Apenas o Admin OU o criador da ocorrência podem apagar
+        if (profileType !== 'admin' && occurrence.user_id !== userId) {
+            return res.status(403).json({ 
+                message: "Access denied. You can only delete photos from occurrences you created." 
+            });
+        }
+
+        // 4. LIMPAR DO CLOUDINARY (Opcional, mas dá nota extra pela perfeição técnica!)
+        // O public_id é o identificador único da foto no Cloudinary. 
+        // Conseguimos extraí-lo facilmente do URL guardado:
+        try {
+            const urlParts = photo.photo_url.split('/');
+            const folderName = 'occurrence_photos'; // Nome da pasta que definiste no config
+            const fileWithName = urlParts[urlParts.length - 1]; // ex: "abc123xyz.jpg"
+            const publicId = `${folderName}/${fileWithName.split('.')[0]}`; // ex: "occurrence_photos/abc123xyz"
+            
+            await cloudinary.uploader.destroy(publicId);
+        } catch (cloudinaryError) {
+            console.error("Failed to delete image from Cloudinary:", cloudinaryError);
+            // Não travamos o processo se falhar no Cloudinary, o importante é limpar a BD
+        }
+
+        // 5. Apagar da Base de Dados
         await photo.destroy();
+
         return res.status(200).json({ message: "Photo deleted successfully!" });
     } catch (error) {
         return res.status(500).json({ message: error.message || "Error deleting photo." });
