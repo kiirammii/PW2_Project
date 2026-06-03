@@ -5,19 +5,27 @@ export const getCommentsByOccurrence = async (req, res, next) => {
     try {
         const { occurrence_id } = req.params;
 
-        const occurrence = await Occurrence.findByPk(occurrence_id);
+        // --- CONVERSÃO EXPLICITA PARA NÚMERO ---
+        const numericOccurrenceId = parseInt(occurrence_id, 10);
+
+        if (isNaN(numericOccurrenceId)) {
+            return res.status(400).json({ message: "The provided occurrence ID must be a valid number." });
+        }
+        // ----------------------------------------
+
+        const occurrence = await Occurrence.findByPk(numericOccurrenceId);
         if (!occurrence) {
-            return res.status(404).json({ message: "Ocorrência não encontrada." });
+            return res.status(404).json({ message: "Occurrence not found." });
         }
 
         const comments = await Comment.findAll({
-            where: { occurrence_id },
+            where: { occurrence_id: numericOccurrenceId },
             order: [['creation_date', 'ASC']] 
         });
 
         return res.status(200).json(comments);
     } catch (error) {
-        return res.status(500).json({ message: error.message || "Erro ao listar comentários." });
+        return res.status(500).json({ message: error.message || "Error listing comments." });
     }
 }
 
@@ -79,18 +87,27 @@ export const flagComment = async (req, res, next) => {
         const userId = req.loggedUser.user_id;
         const profileType = req.loggedUser.profile_type;
 
-        const occurrence = await Occurrence.findByPk(occurrence_id);
+        // --- CONVERSÃO EXPLICITA PARA NÚMEROS ---
+        const numericOccurrenceId = parseInt(occurrence_id, 10);
+        const numericCommentId = parseInt(comment_id, 10);
+
+        if (isNaN(numericOccurrenceId) || isNaN(numericCommentId)) {
+            return res.status(400).json({ message: "The provided IDs must be valid numbers." });
+        }
+        // ----------------------------------------
+
+        const occurrence = await Occurrence.findByPk(numericOccurrenceId);
         if (!occurrence) {
-            return res.status(404).json({ message: "Ocorrência não encontrada." });
+            return res.status(404).json({ message: "Occurrence not found." });
         }
 
-        const comment = await Comment.findByPk(comment_id);
+        const comment = await Comment.findByPk(numericCommentId);
         if (!comment) {
-            return res.status(404).json({ message: "Comentário não encontrado." });
+            return res.status(404).json({ message: "Comment not found." });
         }
 
-        if (comment.occurrence_id !== Number(occurrence_id)) {
-            return res.status(404).json({ message: "Comentário não encontrado nesta ocorrência." });
+        if (comment.occurrence_id !== numericOccurrenceId) {
+            return res.status(404).json({ message: "Comment not found in this occurrence." });
         }
 
         // REGRA DO ENUNCIADO: Funcionários e Admins podem sinalizar tudo.
@@ -98,7 +115,7 @@ export const flagComment = async (req, res, next) => {
         if (profileType !== 'admin' && profileType !== 'funcionario') {
             if (occurrence.user_id !== userId) {
                 return res.status(403).json({ 
-                    message: "Acesso proibido. Apenas podes sinalizar comentários nas ocorrências que tu criaste." 
+                    message: "Access denied. You can only flag comments in occurrences you created." 
                 });
             }
         }
@@ -106,11 +123,11 @@ export const flagComment = async (req, res, next) => {
         await comment.update({ is_inappropriate: true });
 
         return res.status(200).json({ 
-            message: "Comentário sinalizado como indevido com sucesso. Será revisto pelo Administrador.", 
+            message: "Comment flagged as inappropriate successfully. It will be reviewed by the Administrator.", 
             comment 
         });
     } catch (error) {
-        return res.status(500).json({ message: error.message || "Erro ao sinalizar comentário." });
+        return res.status(500).json({ message: error.message || "Error flagging comment." });
     }
 }
 
@@ -121,27 +138,36 @@ export const deleteComment = async (req, res, next) => {
         const profileType = req.loggedUser.profile_type;
 
         if (profileType !== 'admin') {
-            return res.status(403).json({ message: "Acesso proibido. Apenas Administradores podem remover comentários." });
+            return res.status(403).json({ message: "Access denied. Only Administrators can remove comments." });
         }
 
-        const occurrence = await Occurrence.findByPk(occurrence_id);
+        // --- CONVERSÃO EXPLICITA PARA NÚMEROS ---
+        const numericOccurrenceId = parseInt(occurrence_id, 10);
+        const numericCommentId = parseInt(comment_id, 10);
+
+        if (isNaN(numericOccurrenceId) || isNaN(numericCommentId)) {
+            return res.status(400).json({ message: "The provided IDs must be valid numbers." });
+        }
+        // ----------------------------------------
+
+        const occurrence = await Occurrence.findByPk(numericOccurrenceId);
         if (!occurrence) {
-            return res.status(404).json({ message: "Ocorrência não encontrada." });
+            return res.status(404).json({ message: "Occurrence not found." });
         }
 
-        const comment = await Comment.findByPk(comment_id);
+        const comment = await Comment.findByPk(numericCommentId);
         if (!comment) {
-            return res.status(404).json({ message: "Comentário não encontrado." });
+            return res.status(404).json({ message: "Comment not found." });
         }
 
-        if (comment.occurrence_id !== Number(occurrence_id)) {
-            return res.status(404).json({ message: "Comentário não encontrado nesta ocorrência." });
+        if (comment.occurrence_id !== numericOccurrenceId) {
+            return res.status(404).json({ message: "Comment not found in this occurrence." });
         }
 
         await comment.destroy();
 
-        return res.status(200).json({ message: "Comentário removido pelo Administrador com sucesso!" });
+        return res.status(200).json({ message: "Comment removed by Administrator successfully!" });
     } catch (error) {
-        return res.status(500).json({ message: error.message || "Erro ao eliminar comentário." });
+        return res.status(500).json({ message: error.message || "Error removing comment." });
     }
 }
