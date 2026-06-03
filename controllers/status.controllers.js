@@ -118,7 +118,7 @@ export const deleteStatus = async (req, res, next) => {
     } catch (error) {
         console.error("Error in deleteStatus:", error);
 
-        // if the error is due to foreign key constraints (e.g., category is associated with existing occurrences), return a specific message
+        // if the error is due to foreign key constraints, return a specific message
         return res.status(500).json({ 
             message: "Error deleting status. Make sure it is not associated with any occurrences or status history." 
         });

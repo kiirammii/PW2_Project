@@ -114,14 +114,21 @@ export const deleteCategory = async (req, res, next) => {
             return res.status(404).json({ message: "Category not found." });
         }
 
+        // --- NOVA VALIDAÇÃO DEFENSIVA ---
+        // Verifica se existem ocorrências que usem esta categoria
+        const associatedOccurrences = await Occurrence.findOne({ where: { category_id } });
+        if (associatedOccurrences) {
+            return res.status(409).json({ 
+                message: "Cannot delete category. There are existing occurrences associated with it." 
+            });
+        }
+
         await category.destroy();
         return res.status(200).json({ message: "Category deleted successfully!" });
     } catch (error) {
         console.error("Error in deleteCategory:", error);
-
-        // if the error is due to foreign key constraints (e.g., category is associated with existing occurrences), return a specific message
         return res.status(500).json({ 
-            message: "Error deleting category. Make sure it is not associated with any existing occurrences." 
+            message: "Error deleting category." 
         });
     }
 }

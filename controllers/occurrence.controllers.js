@@ -85,6 +85,18 @@ export const createOccurrence = async (req, res, next) => {
         if (latitude === undefined || latitude === null) errors.push({ field: "latitude", message: "Latitude is required." });
         if (longitude === undefined || longitude === null) errors.push({ field: "longitude", message: "Longitude is required." });
 
+        // --- NOVAS VALIDAÇÕES DE TIPO DE DADOS ---
+        if (category_id && isNaN(Number(category_id))) {
+            errors.push({ field: "category_id", message: "Category ID must be a valid number." });
+        }
+        if ((latitude !== undefined && latitude !== null) && isNaN(Number(latitude))) {
+            errors.push({ field: "latitude", message: "Latitude must be a valid number." });
+        }
+        if ((longitude !== undefined && longitude !== null) && isNaN(Number(longitude))) {
+            errors.push({ field: "longitude", message: "Longitude must be a valid number." });
+        }
+        // -----------------------------------------
+
         // validate building_zone against allowed values with a clear error message
         const allowedZones = ['Bloco A', 'Bloco B', 'Bloco C', 'Bloco D', 'Bloco E', 'Bloco F', 'Bloco G'];
         if (building_zone && !allowedZones.includes(building_zone)) {
@@ -102,10 +114,10 @@ export const createOccurrence = async (req, res, next) => {
 
         const newOccurrence = await Occurrence.create({
             description,
-            category_id,
+            category_id: Number(category_id), // Garante que entra como número
             building_zone, 
-            latitude,
-            longitude,
+            latitude: Number(latitude),       // Garante que entra como número
+            longitude: Number(longitude),     // Garante que entra como número
             user_id: userId,
             status_id: 1,    
             priority: 'Low'  
@@ -139,10 +151,11 @@ export const updateOccurrence = async (req, res, next) => {
         const userId = req.loggedUser.user_id;
         const profileType = req.loggedUser.profile_type;
         
+        const bodyData = req.body || {};
         const { 
             description, category_id, building_zone, latitude, longitude, 
             status_id, priority, expected_date, resolution_date 
-        } = req.body;
+        } = bodyData;
 
         const occurrence = await Occurrence.findByPk(occurrence_id);
 
