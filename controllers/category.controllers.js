@@ -1,4 +1,4 @@
-import { Category } from '../models/db.config.js';
+import { Category, Occurrence } from '../models/db.config.js';
 
 // ==========================================
 // Retrieve all Categories
@@ -105,21 +105,25 @@ export const deleteCategory = async (req, res, next) => {
         const { category_id } = req.params;
 
         // check if logged-in user is an admin
-        if (req.loggedUser.profile_type !== 'admin') {
+        if (req.loggedUser?.profile_type !== 'admin') {
             return res.status(403).json({ message: "Access denied. Only administrators can delete categories." });
         }
 
-        const category = await Category.findByPk(category_id);
+        const categoryId = Number(category_id);
+        if (Number.isNaN(categoryId)) {
+            return res.status(400).json({ message: "The category ID must be a valid number." });
+        }
+
+        const category = await Category.findByPk(categoryId);
         if (!category) {
             return res.status(404).json({ message: "Category not found." });
         }
 
-        // --- NOVA VALIDAÇÃO DEFENSIVA ---
-        // Verifica se existem ocorrências que usem esta categoria
-        const associatedOccurrences = await Occurrence.findOne({ where: { category_id } });
+        // Prevent deleting categories that are still referenced by occurrences.
+        const associatedOccurrences = await Occurrence.count({ where: { category_id: categoryId } });
         if (associatedOccurrences) {
-            return res.status(409).json({ 
-                message: "Cannot delete category. There are existing occurrences associated with it." 
+            return res.status(409).json({
+                message: "Cannot delete category. There are existing occurrences associated with it."
             });
         }
 
