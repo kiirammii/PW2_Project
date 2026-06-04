@@ -7,18 +7,19 @@ import { User } from '../models/db.config.js';
 // ==========================================
 export const registerUser = async (req, res, next) => {
     try {
-        const { user_name, email, password, profile_type: requestedProfileType } = req.body;
+        const { user_name, email, password } = req.body;
 
         // validate required fields
         if (!user_name || !email || !password) {
             return res.status(400).json({ message: "All fields (user_name, email, password) are required." });
         }
 
-        // validate password
+        // validate password length
         if (password.length < 10) {
             return res.status(400).json({ message: "Password must be at least 10 characters long." });
         }
 
+        // check for spaces in the password
         if (password.includes(' ')) {
             return res.status(400).json({ message: "Password cannot contain spaces." });
         }
@@ -28,22 +29,17 @@ export const registerUser = async (req, res, next) => {
             return res.status(400).json({ message: "Password can only contain letters, numbers, and the following special characters: !, #, -, _" });
         }
 
-        const profile_type = requestedProfileType || 'student_teacher';
+        const profile_type = 'student_teacher';
 
-        const allowedProfiles = ['student_teacher', 'staff', 'admin'];
-        if (!allowedProfiles.includes(profile_type)) {
-            return res.status(400).json({ message: "Invalid profile type. Use: admin, staff, or student_teacher." });
-        }
+        // check if the email is from the institutional domain
+        const cleanEmail = email.trim().toLowerCase();
 
-        // students and teachers must register with institutional email addresses
-        if (profile_type === 'student_teacher') {
-            if (!email.includes('esmad.ipp.pt') && !email.includes('esht.ipp.pt')) {
-                return res.status(400).json({ message: "Students and Teachers must register with the institutional email." });
-            }
+        if (!cleanEmail.includes('esmad.ipp.pt') && !cleanEmail.includes('esht.ipp.pt')) {
+            return res.status(400).json({ message: "Students and Teachers must register with the institutional email." });
         }
 
         // verify if the email is already registered
-        const userExists = await User.findOne({ where: { email } });
+        const userExists = await User.findOne({ where: { email: cleanEmail } });
         if (userExists) {
             return res.status(409).json({ message: "This email is already registered." });
         }
@@ -54,8 +50,8 @@ export const registerUser = async (req, res, next) => {
 
         // create the new user in the database
         const newUser = await User.create({
-            user_name,
-            email,
+            user_name: user_name.trim(),
+            email: cleanEmail,
             password: hashedPassword,
             profile_type: profile_type,
             state: 'active'
@@ -77,7 +73,6 @@ export const registerUser = async (req, res, next) => {
     }
 };
 
-
 // ==========================================
 // Authenticate an User
 // ==========================================
@@ -90,10 +85,12 @@ export const loginUser = async (req, res, next) => {
             return res.status(400).json({ message: "Email and password are required." });
         }
 
+        const cleanEmail = email.trim().toLowerCase();
+
         // search for the user by email
-        const user = await User.findOne({ where: { email } });
+        const user = await User.findOne({ where: { email: cleanEmail } });
         if (!user) {
-            return res.status(401).json({ message: "Email is not registered." });
+            return res.status(401).json({ message: "Invalid email or password." }); // Dica de segurança: não dar pistas se o email existe ou não
         }
 
         // verify if the user is suspended
@@ -104,7 +101,7 @@ export const loginUser = async (req, res, next) => {
         // compare the provided password with the hashed password in the database
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            return res.status(401).json({ message: "Password is incorrect." });
+            return res.status(401).json({ message: "Invalid email or password." });
         }
 
         // generate the JWT Token
@@ -131,27 +128,27 @@ export const loginUser = async (req, res, next) => {
     }
 }
 
-
 // ==========================================
 // Retrieve all Users
 // ==========================================
 export const getAllUsers = async (req, res, next) => {
     try {
-        if (req.loggedUser.profile_type === 'admin') {
-            const users = await User.findAll({
-                attributes: ['user_id', 'user_name', 'email', 'profile_type', 'state']
-            });
-            return res.status(200).json(users);
+
+        // check if the logged user is an admin
+        if (req.loggedUser.profile_type !== 'admin') {
+            return res.status(403).json({ message: "Access denied. Only administrators can view all users." });
         }
 
-        else return res.status(403).json({ message: "Access denied. Only administrators can view all users." });
+        const users = await User.findAll({
+            attributes: ['user_id', 'user_name', 'email', 'profile_type', 'state']
+        });
+        return res.status(200).json(users);
 
     } catch (error) {
         console.error("Error in getAllUsers:", error);
         return res.status(500).json({ message: "Error while listing users." });
     }
 }
-
 
 // ==========================================
 // Edit an User
@@ -161,13 +158,22 @@ export const updateUser = async (req, res, next) => {
         const { user_id } = req.params;
         const { user_name, email, state, profile_type } = req.body;
 
+        const loggedUserId = req.loggedUser.user_id;
+        const loggedProfileType = req.loggedUser.profile_type;
+
+        // convert user_id to number and validate
+        const numericUserId = parseInt(user_id, 10);
+        if (isNaN(numericUserId)) {
+            return res.status(400).json({ message: "The user ID must be a valid number." });
+        }
+
         // if not admin, can only edit their own profile ID
-        if (req.loggedUser.profile_type !== 'admin' && String(req.loggedUser.user_id) !== String(user_id)) {
+        if (loggedProfileType !== 'admin' && loggedUserId !== numericUserId) {
             return res.status(403).json({ message: "Access denied. You cannot edit other users' profiles." });
         }
 
         // find User
-        const user = await User.findByPk(user_id);
+        const user = await User.findByPk(numericUserId);
         if (!user) {
             return res.status(404).json({ message: "User not found." });
         }
@@ -183,14 +189,22 @@ export const updateUser = async (req, res, next) => {
         // validate and update: email
         if (email !== undefined) {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (typeof email !== 'string' || !emailRegex.test(email)) {
+            const cleanEmail = email.trim().toLowerCase();
+            
+            if (typeof email !== 'string' || !emailRegex.test(cleanEmail)) {
                 return res.status(400).json({ message: "Invalid email format." });
             }
-            user.email = email.trim().toLowerCase();
+
+            // check for duplicate email in the database, excluding the current user
+            const emailConflict = await User.findOne({ where: { email: cleanEmail } });
+            if (emailConflict && emailConflict.user_id !== numericUserId) {
+                return res.status(409).json({ message: "This email is already in use by another user." });
+            }
+            user.email = cleanEmail;
         }
         
         // validate and update: state (admin)
-        if (state && req.loggedUser.profile_type === 'admin') {
+        if (state && loggedProfileType === 'admin') {
             const allowedStates = ['active', 'suspended'];
             if (!allowedStates.includes(state)) {
                 return res.status(400).json({ message: "Invalid state. Use: active or suspended." });
@@ -199,14 +213,14 @@ export const updateUser = async (req, res, next) => {
         }
 
         // validate and update: profile_type (admin)
-        if (profile_type && req.loggedUser.profile_type === 'admin') {
+        if (profile_type && loggedProfileType === 'admin') {
             const allowedProfiles = ['student_teacher', 'staff', 'admin'];
             if (!allowedProfiles.includes(profile_type)) {
                 return res.status(400).json({ message: "Invalid profile type. Use: admin, staff or student_teacher." });
             }
 
             // admin cannot remove their own admin privileges
-            if (String(req.loggedUser.user_id) === String(user_id) && profile_type !== 'admin') {
+            if (loggedUserId === numericUserId && profile_type !== 'admin') {
                 return res.status(400).json({ message: "You cannot remove your own administrator privileges." });
             }
 
@@ -233,25 +247,32 @@ export const updateUser = async (req, res, next) => {
     }
 }
 
-
 // ==========================================
 // Delete an User
 // ==========================================
 export const deleteUser = async (req, res, next) => {
     try {
         const { user_id } = req.params;
+        const loggedUserId = req.loggedUser.user_id;
 
         // only admins can delete users
         if (req.loggedUser.profile_type !== 'admin') {
             return res.status(403).json({ message: "Access denied. Only administrators can delete users." });
         }
 
-        const user = await User.findByPk(user_id);
+        // convert user_id to number and validate
+        const numericUserId = parseInt(user_id, 10);
+        if (isNaN(numericUserId)) {
+            return res.status(400).json({ message: "The user ID must be a valid number." });
+        }
+
+        const user = await User.findByPk(numericUserId);
         if (!user) {
             return res.status(404).json({ message: "User not found." });
         }
 
-        if (String(req.loggedUser.user_id) === String(user_id)) {
+        // admin cannot delete their own account
+        if (loggedUserId === numericUserId) {
             return res.status(400).json({ message: "You cannot delete your own administrator account." });
         }
 

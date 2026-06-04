@@ -13,7 +13,6 @@ export const getAllStatus = async (req, res, next) => {
     }
 }
 
-
 // ==========================================
 // Create a New Status
 // ==========================================
@@ -30,7 +29,6 @@ export const createStatus = async (req, res, next) => {
         if (status_name !== undefined && typeof status_name !== 'string') {
             return res.status(400).json({ message: "The status name must be a valid text string." });
         }
-        // ---------------------------------------------------------
 
         // avoid creating statuses with empty or whitespace-only names
         if (!status_name || status_name.trim() === "") {
@@ -58,7 +56,6 @@ export const createStatus = async (req, res, next) => {
     }
 };
 
-
 // ==========================================
 // Edit a Status
 // ==========================================
@@ -72,20 +69,28 @@ export const updateStatus = async (req, res, next) => {
             return res.status(403).json({ message: "Access denied. Only administrators can update statuses." });
         }
 
-        if (!status_name || status_name.trim() === "") {
-            return res.status(400).json({ message: "The new status name is required." });
+        // convert status_id to a number before querying the database
+        const numericStatusId = parseInt(status_id, 10);
+        if (isNaN(numericStatusId)) {
+            return res.status(400).json({ message: "The status ID must be a valid number." });
         }
 
-        const status = await Status.findByPk(status_id);
-        if (!status) {
-            return res.status(404).json({ message: "Status not found." });
+        // status name must be a valid text string
+        if (!status_name || typeof status_name !== 'string' || status_name.trim() === "") {
+            return res.status(400).json({ message: "The new status name is required and must be text." });
         }
 
         const cleanName = status_name.trim();
 
+        const status = await Status.findByPk(numericStatusId);
+        if (!status) {
+            return res.status(404).json({ message: "Status not found." });
+        }
+
         // check for name conflicts with other status (excluding the current status)
         const nameConflict = await Status.findOne({ where: { status_name: cleanName } });
-        if (nameConflict && String(nameConflict.status_id) !== String(status_id)) {
+        
+        if (nameConflict && nameConflict.status_id !== numericStatusId) {
             return res.status(409).json({ message: "Another status with this name already exists." });
         }
 
@@ -102,7 +107,6 @@ export const updateStatus = async (req, res, next) => {
     }
 }
 
-
 // ==========================================
 // Delete a Status
 // ==========================================
@@ -115,17 +119,20 @@ export const deleteStatus = async (req, res, next) => {
             return res.status(403).json({ message: "Access denied. Only administrators can delete statuses." });
         }
 
-        const statusId = Number(status_id);
-        if (Number.isNaN(statusId)) {
+        // convert status_id to a number before querying the database
+        const numericStatusId = parseInt(status_id, 10);
+        if (isNaN(numericStatusId)) {
             return res.status(400).json({ message: "The status ID must be a valid number." });
         }
 
-        const status = await Status.findByPk(statusId);
+        // check if the status exists
+        const status = await Status.findByPk(numericStatusId);
         if (!status) {
             return res.status(404).json({ message: "Status not found." });
         }
 
-        const linkedOccurrences = await Occurrence.count({ where: { status_id: statusId } });
+        // check if there are occurrences linked to this status before allowing deletion
+        const linkedOccurrences = await Occurrence.count({ where: { status_id: numericStatusId } });
         if (linkedOccurrences) {
             return res.status(409).json({
                 message: "Cannot delete status. There are existing occurrences associated with it."
@@ -136,7 +143,6 @@ export const deleteStatus = async (req, res, next) => {
         return res.status(200).json({ message: "Status deleted successfully!" });
     } catch (error) {
         console.error("Error in deleteStatus:", error);
-
         return res.status(500).json({ 
             message: "Error deleting status." 
         });

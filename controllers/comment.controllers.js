@@ -1,17 +1,19 @@
 import { Comment, Occurrence } from '../models/db.config.js';
 
-// get all comments from an occurrence
+// ==========================================
+// Get all Comments for a specific Occurrence
+// ==========================================
 export const getCommentsByOccurrence = async (req, res, next) => {
     try {
         const { occurrence_id } = req.params;
 
-        // --- CONVERSÃO EXPLICITA PARA NÚMERO ---
+        // convert occurrence_id to a number before querying the database
         const numericOccurrenceId = parseInt(occurrence_id, 10);
 
+        // if occurrence_id is not a valid number, return an error
         if (isNaN(numericOccurrenceId)) {
             return res.status(400).json({ message: "The provided occurrence ID must be a valid number." });
         }
-        // ----------------------------------------
 
         const occurrence = await Occurrence.findByPk(numericOccurrenceId);
         if (!occurrence) {
@@ -29,43 +31,46 @@ export const getCommentsByOccurrence = async (req, res, next) => {
     }
 }
 
-// create a comment
+// ==========================================
+// Create a Comment
+// ==========================================
 export const createComment = async (req, res, next) => {
     try {
         const { occurrence_id } = req.params;
         const { content } = req.body || {};
         const userId = req.loggedUser.user_id;
         
-        // 1. CONVERTE EXPLICITAMENTE PARA NÚMERO INTEIRO
+        // convert occurrence_id to a number before querying the database
         const numericOccurrenceId = parseInt(occurrence_id, 10);
 
-        // Se por acaso não for um número válido (ex: mandaram "abc" no URL)
+        // if occurrence_id is not a valid number, return an error
         if (isNaN(numericOccurrenceId)) {
             return res.status(400).json({ message: "Occurrence ID must be a valid number." });
         }
 
-        // 2. BUSCA NA BD USANDO O ID JÁ CONVERTIDO PARA NÚMERO
         const occurrence = await Occurrence.findByPk(numericOccurrenceId);
         if (!occurrence) {
             return res.status(404).json({ message: "Occurrence not found." });
         }
 
-        // 3. VALIDAÇÕES DO CONTEÚDO
+        // comment content must be a valid text string
         if (content !== undefined && typeof content !== 'string') {
             return res.status(400).json({ message: "The comment content must be a valid text." });
         }
 
+        // avoid creating comments with empty or whitespace-only content
         if (!content || content.trim() === "") {
             return res.status(400).json({ message: "The comment content is required." });
         }
         
+        // comments cannot be added to occurrences that are already resolved (status_id = 4)
         if (occurrence.status_id === 4) {
             return res.status(400).json({ message: "You can't comment on already resolved occurrences." });
         }
 
-        // 4. CRIAÇÃO DO COMENTÁRIO
+        // create the comment with the numeric occurrence ID
         const newComment = await Comment.create({
-            occurrence_id: numericOccurrenceId, // Usa o número aqui também
+            occurrence_id: numericOccurrenceId,
             user_id: userId,
             content: content.trim(),
             creation_date: new Date()
@@ -80,42 +85,47 @@ export const createComment = async (req, res, next) => {
     }
 };
 
-// mark a comment as inappropriate
+
+// ==========================================
+// Mark a Comment as Inappropriate (Flag)
+// ==========================================
 export const flagComment = async (req, res, next) => {
     try {
         const { occurrence_id, comment_id } = req.params;
         const userId = req.loggedUser.user_id;
         const profileType = req.loggedUser.profile_type;
 
-        // --- CONVERSÃO EXPLICITA PARA NÚMEROS ---
+        // convert occurrence_id and comment_id to numbers before querying the database
         const numericOccurrenceId = parseInt(occurrence_id, 10);
         const numericCommentId = parseInt(comment_id, 10);
 
+        // if either ID is not a valid number, return an error
         if (isNaN(numericOccurrenceId) || isNaN(numericCommentId)) {
             return res.status(400).json({ message: "The provided IDs must be valid numbers." });
         }
-        // ----------------------------------------
 
+        // check if the occurrence exists
         const occurrence = await Occurrence.findByPk(numericOccurrenceId);
         if (!occurrence) {
             return res.status(404).json({ message: "Occurrence not found." });
         }
 
+        // check if the comment exists
         const comment = await Comment.findByPk(numericCommentId);
         if (!comment) {
             return res.status(404).json({ message: "Comment not found." });
         }
 
+        // check if the comment belongs to the specified occurrence
         if (comment.occurrence_id !== numericOccurrenceId) {
             return res.status(404).json({ message: "Comment not found in this occurrence." });
         }
 
-        // REGRA DO ENUNCIADO: Funcionários e Admins podem sinalizar tudo.
-        // Utilizador comum só sinaliza se for na ocorrência que ELE PRÓPRIO criou.
-        if (profileType !== 'admin' && profileType !== 'funcionario') {
-            if (occurrence.user_id !== userId) {
+        // if the user is not an admin or staff, they can only flag their own comments or comments on occurrences they created
+        if (profileType !== 'admin' && profileType !== 'staff') {
+            if (comment.user_id !== userId && occurrence.user_id !== userId) {
                 return res.status(403).json({ 
-                    message: "Access denied. You can only flag comments in occurrences you created." 
+                    message: "Access denied. You can only flag your own comments or comments on occurrences you created." 
                 });
             }
         }
@@ -131,35 +141,41 @@ export const flagComment = async (req, res, next) => {
     }
 }
 
-// delete a comment (Only Admin)
+// ==========================================
+// Delete a Comment
+// ==========================================
 export const deleteComment = async (req, res, next) => {
     try {
         const { occurrence_id, comment_id } = req.params;
         const profileType = req.loggedUser.profile_type;
 
+        // only users with 'admin' profile can delete comments
         if (profileType !== 'admin') {
             return res.status(403).json({ message: "Access denied. Only Administrators can remove comments." });
         }
 
-        // --- CONVERSÃO EXPLICITA PARA NÚMEROS ---
+        // convert occurrence_id and comment_id to numbers before querying the database
         const numericOccurrenceId = parseInt(occurrence_id, 10);
         const numericCommentId = parseInt(comment_id, 10);
 
+        // if either ID is not a valid number, return an error
         if (isNaN(numericOccurrenceId) || isNaN(numericCommentId)) {
             return res.status(400).json({ message: "The provided IDs must be valid numbers." });
         }
-        // ----------------------------------------
 
+        // check if the occurrence exists
         const occurrence = await Occurrence.findByPk(numericOccurrenceId);
         if (!occurrence) {
             return res.status(404).json({ message: "Occurrence not found." });
         }
 
+        // check if the comment exists
         const comment = await Comment.findByPk(numericCommentId);
         if (!comment) {
             return res.status(404).json({ message: "Comment not found." });
         }
-
+        
+        // check if the comment belongs to the specified occurrence
         if (comment.occurrence_id !== numericOccurrenceId) {
             return res.status(404).json({ message: "Comment not found in this occurrence." });
         }

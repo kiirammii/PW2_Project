@@ -13,7 +13,6 @@ export const getAllCategory = async (req, res, next) => {
     }
 }
 
-
 // ==========================================
 // Create a New Category 
 // ==========================================
@@ -57,7 +56,6 @@ export const createCategory = async (req, res, next) => {
     }
 }
 
-
 // ==========================================
 // Edit a Category
 // ==========================================
@@ -71,11 +69,18 @@ export const updateCategory = async (req, res, next) => {
             return res.status(403).json({ message: "Access denied. Only administrators can update categories." });
         }
 
-        if (!category_name || category_name.trim() === "") {
-            return res.status(400).json({ message: "The new category name is required." });
+        // convert category_id to a number before querying the database
+        const numericCategoryId = parseInt(category_id, 10);
+        if (isNaN(numericCategoryId)) {
+            return res.status(400).json({ message: "The category ID must be a valid number." });
         }
 
-        const category = await Category.findByPk(category_id);
+        // category name must be a valid text string
+        if (!category_name || typeof category_name !== 'string' || category_name.trim() === "") {
+            return res.status(400).json({ message: "The new category name is required and must be text." });
+        }
+        
+        const category = await Category.findByPk(numericCategoryId);
         if (!category) {
             return res.status(404).json({ message: "Category not found." });
         }
@@ -84,7 +89,8 @@ export const updateCategory = async (req, res, next) => {
 
         // check for name conflicts with other categories (excluding the current category)
         const nameConflict = await Category.findOne({ where: { category_name: cleanName } });
-        if (nameConflict && String(nameConflict.category_id) !== String(category_id)) {
+        // Ajustada a comparação de IDs de forma numérica pura
+        if (nameConflict && nameConflict.category_id !== numericCategoryId) {
             return res.status(409).json({ message: "Another category with this name already exists." });
         }
 
@@ -95,12 +101,12 @@ export const updateCategory = async (req, res, next) => {
             message: "Category updated successfully!",
             category
         });
+
     } catch (error) {
         console.error("Error in updateCategory:", error);
         return res.status(500).json({ message: "Error updating category." });
     }
 }
-
 
 // ==========================================
 // Delete a Category
@@ -114,18 +120,19 @@ export const deleteCategory = async (req, res, next) => {
             return res.status(403).json({ message: "Access denied. Only administrators can delete categories." });
         }
 
-        const categoryId = Number(category_id);
-        if (Number.isNaN(categoryId)) {
+        // convert category_id to a number before querying the database
+        const numericCategoryId = parseInt(category_id, 10);
+        if (isNaN(numericCategoryId)) {
             return res.status(400).json({ message: "The category ID must be a valid number." });
         }
 
-        const category = await Category.findByPk(categoryId);
+        const category = await Category.findByPk(numericCategoryId);
         if (!category) {
             return res.status(404).json({ message: "Category not found." });
         }
 
         // Prevent deleting categories that are still referenced by occurrences.
-        const associatedOccurrences = await Occurrence.count({ where: { category_id: categoryId } });
+        const associatedOccurrences = await Occurrence.count({ where: { category_id: numericCategoryId } });
         if (associatedOccurrences) {
             return res.status(409).json({
                 message: "Cannot delete category. There are existing occurrences associated with it."
