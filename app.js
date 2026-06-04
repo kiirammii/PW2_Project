@@ -22,6 +22,7 @@ app.use('/occurrences', occurrenceRoutes);
 app.use('/status', statusRoutes);
 app.use('/users', userRoutes);
 
+
 // handle 404 error for unknown routes
 app.use((req, res, next) => {
     const error = new Error(`Route ${req.method} ${req.originalUrl} not found`);

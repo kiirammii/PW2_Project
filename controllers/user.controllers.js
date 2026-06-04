@@ -109,7 +109,7 @@ export const loginUser = async (req, res, next) => {
         const token = jwt.sign(
             { user_id: user.user_id, profile_type: user.profile_type },
             secretKey,
-            { expiresIn: '1d' }
+            { expiresIn: '2h' }
         );
 
         return res.status(200).json({
