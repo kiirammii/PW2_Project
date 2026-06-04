@@ -1,0 +1,10 @@
+services:
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      # Override HOST so the server binds to all interfaces inside the container
+      HOST: "0.0.0.0"
